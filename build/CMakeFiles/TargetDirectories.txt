@@ -1,0 +1,3 @@
+/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles/graph.dir
+/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles/edit_cache.dir
+/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles/rebuild_cache.dir
