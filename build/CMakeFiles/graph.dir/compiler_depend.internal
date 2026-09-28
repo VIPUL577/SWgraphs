@@ -25,6 +25,9 @@ CMakeFiles/graph.dir/include/Essentials/main/graph.cu.o
  /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/slab_hash_global.cuh
  /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/slab_hash_helper_methods.cuh
  /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/slab_iterator.cuh
+ /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/graphsEditKernels/deleteEdges.cu
+ /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/graphsEditKernels/insertEdges.cu
+ /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/graphsEditKernels/updateEdges.cu
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
  /usr/include/asm-generic/errno.h

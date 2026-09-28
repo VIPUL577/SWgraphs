@@ -1741,4 +1741,6 @@ CMakeFiles/graph.dir/include/Essentials/main/graph.cu.o : /home/vipulagarwal/Doc
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/system/detail/sequential/unique.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/system/cpp/detail/unique_by_key.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/system/detail/sequential/unique_by_key.h \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/system/cuda/execution_policy.h
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/system/cuda/execution_policy.h \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/main/../graphsEditKernels/insertEdges.cu \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/main/../graphsEditKernels/deleteEdges.cu
