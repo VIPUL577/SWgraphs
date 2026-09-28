@@ -56,13 +56,14 @@ private:
     uint32_t *d_firstUpdatedSlab;
     uint8_t *d_firstUpdatedLaneId;
     int *d_BucketsPrefixSum;
+    int *d_vertexDegree;
     bool *d_isSlablistUpdated;
     uint32_t *d_headptr;       // buckets head pointers
     EdgeDynContext graphAlloc; // gpu
     edgeHashCxt *graphVertex;  // gpu
 
 public:
-    DynamicSlabGraph(int N, int *h_vertexDegree, EdgeDynAllocator &allocator, float loadFactor, uint32_t device_index)
+    DynamicSlabGraph(uint32_t N, int *h_vertexDegree, EdgeDynAllocator &allocator, float loadFactor, uint32_t device_index)
     {
         cudaSetDevice(device_index);
         h_BucketsPerVertex = new int[N];
@@ -79,6 +80,7 @@ public:
         CHECK_CUDA_ERROR(cudaMalloc(&d_firstUpdatedLaneId, sizeof(uint8_t) * totalBuckets));
         CHECK_CUDA_ERROR(cudaMalloc(&d_isSlablistUpdated, sizeof(bool) * totalBuckets));
         CHECK_CUDA_ERROR(cudaMalloc(&d_BucketsPrefixSum, sizeof(int) * N));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_vertexDegree, sizeof(int) * N));
         CHECK_CUDA_ERROR(cudaMalloc(&d_headptr, 32 * sizeof(uint32_t) * totalBuckets));
 
         thrust::fill(thrust::device, d_firstUpdatedSlab, d_firstUpdatedSlab + totalBuckets, static_cast<uint32_t>(SlabInfoT::A_INDEX_POINTER));
@@ -99,12 +101,27 @@ public:
 
         CHECK_CUDA_ERROR(cudaMalloc(&graphVertex, sizeof(edgeHashCxt) * N));
         CHECK_CUDA_ERROR(cudaMemcpy(graphVertex, tempVertexHost.data(), sizeof(edgeHashCxt) * N, cudaMemcpyHostToDevice));
-        CHECK_CUDA_ERROR(cudaMemcpy(d_BucketsPrefixSum,h_BucketsPrefixSum,sizeof(int) * N,cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_BucketsPrefixSum, h_BucketsPrefixSum, sizeof(int) * N, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_vertexDegree, h_vertexDegree, sizeof(int) * N, cudaMemcpyHostToDevice));
 
-        graphAlloc = *allocator.getContextPtr(); 
+        graphAlloc = *allocator.getContextPtr();
     }
-
-    // have to write getter functions, destructor, and insert and deletion od edges, 
+    ~DynamicSlabGraph()
+    {
+        delete h_BucketsPerVertex;
+        delete h_BucketsPrefixSum;
+        CHECK_CUDA_ERROR(cudaFree(d_firstUpdatedSlab));
+        CHECK_CUDA_ERROR(cudaFree(d_firstUpdatedLaneId));
+        CHECK_CUDA_ERROR(cudaFree(d_isSlablistUpdated));
+        CHECK_CUDA_ERROR(cudaFree(d_BucketsPrefixSum));
+        CHECK_CUDA_ERROR(cudaFree(d_vertexDegree));
+        CHECK_CUDA_ERROR(cudaFree(graphVertex));
+        CHECK_CUDA_ERROR(cudaFree(d_headptr));
+    }
+    void insertEdges(VertexT* sourceVertex, VertexT* dstVertex, EdgeValueT* weigths, uint32_t countN); 
+    void deleteEdges(VertexT* sourceVertex, VertexT* dstVertex, uint32_t countN); 
+    void updateEdges(VertexT* sourceVertex, VertexT* dstVertex, EdgeValueT* weigths, uint32_t countN); 
+    // have to write getter functions, destructor, and insert , deletion & update on edges code max(2 hours),
 };
 
 int main()
