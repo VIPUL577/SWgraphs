@@ -10,7 +10,7 @@ add_executable(graph include/Essentials/main/graph.cu)
 
 
 target_include_directories(graph PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(graph PRIVATE ${CMAKE_SOURCE_DIR}/SlabHash/src)
-target_include_directories(graph PRIVATE ${CMAKE_SOURCE_DIR}/SlabHash/SlabAlloc/src)
+target_include_directories(graph PRIVATE ${CMAKE_SOURCE_DIR}/external/SlabHash/src)
+target_include_directories(graph PRIVATE ${CMAKE_SOURCE_DIR}/external/SlabHash/SlabAlloc/src)
 target_include_directories(graph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../thrust/)
 

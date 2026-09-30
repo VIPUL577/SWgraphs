@@ -438,29 +438,11 @@ CMakeFiles/graph.dir/include/Essentials/main/graph.cu.o : /home/vipulagarwal/Doc
     /usr/include/c++/11/unordered_set \
     /usr/include/c++/11/bits/unordered_set.h \
     /usr/include/c++/11/shared_mutex \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/slab_hash.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/slab_hash_global.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/SlabAlloc/src/slab_alloc.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/SlabAlloc/src/slab_alloc_global.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/slab_hash_helper_methods.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/cmap_class.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_set/cset_class.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/slab_iterator.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/warp/delete.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/warp/insert.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/warp/search.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/warp/count.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_set/cset_warp_operations.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/device/build.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/device/concurrent_kernel.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/device/delete_kernel.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/device/misc_kernels.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/device/search_kernel.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/device/count_kernel.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_set/cset_helper_kernels.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_map/cmap_implementation.cuh \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src/concurrent_set/cset_implementation.cuh \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/execution_policy.h \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/slab_hash.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/slab_hash_global.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/SlabAlloc/src/slab_alloc.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/SlabAlloc/src/slab_alloc_global.cuh \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/pair.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/config.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/version.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/config/config.h \
@@ -477,9 +459,10 @@ CMakeFiles/graph.dir/include/Essentials/main/graph.cu.o : /home/vipulagarwal/Doc
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/config/exec_check_disable.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/config/global_workarounds.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/config/namespace.h \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/execution_policy.h \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/execute_with_allocator.h \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/execute_with_allocator_fwd.h \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/pair.inl \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/swap.h \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/tuple.h \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/tuple.inl \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/type_traits.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/cuda/std/type_traits \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/cuda/std/detail/__config \
@@ -839,16 +822,49 @@ CMakeFiles/graph.dir/include/Essentials/main/graph.cu.o : /home/vipulagarwal/Doc
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/cuda/std/detail/__pragma_pop \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/cuda/std/detail/libcxx/include/__pragma_pop \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/type_traits/has_trivial_assign.h \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/slab_hash_helper_methods.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/slab_hash_policies.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/slab_iterator.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/cmap_class.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_set/cset_class.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/pcmap_class.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/warp/count.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/warp/delete.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/warp/insert.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/warp/search.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/warp/update.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_set/cset_warp_operations.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/warp/count.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/warp/delete.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/warp/insert.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/warp/search.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/warp/update.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/device/build.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/device/concurrent_kernel.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/device/count_kernel.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/device/delete_kernel.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/device/misc_kernels.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/device/search_kernel.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/device/update_kernels.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_set/cset_helper_kernels.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/device/build.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/device/concurrent_kernel.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/device/count_kernel.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/device/delete_kernel.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/device/search_kernels.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/device/update_kernels.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_map/cmap_implementation.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/concurrent_set/cset_implementation.cuh \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src/phase_concurrent_map/pcmap_implementation.cuh \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/execution_policy.h \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/execution_policy.h \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/execute_with_allocator.h \
+    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/execute_with_allocator_fwd.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/execute_with_dependencies.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/cpp11_required.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/type_deduction.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/preprocessor.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/type_traits/remove_cvref.h \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/pair.h \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/pair.inl \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/swap.h \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/tuple.h \
-    /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/tuple.inl \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/raw_pointer_cast.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/type_traits/pointer_traits.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/detail/type_traits/is_metafunction_defined.h \
@@ -1743,4 +1759,5 @@ CMakeFiles/graph.dir/include/Essentials/main/graph.cu.o : /home/vipulagarwal/Doc
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/system/detail/sequential/unique_by_key.h \
     /usr/local/cuda-12.3/bin/../targets/x86_64-linux/include/thrust/system/cuda/execution_policy.h \
     /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/main/../graphsEditKernels/insertEdges.cu \
-    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/main/../graphsEditKernels/deleteEdges.cu
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/main/../graphsEditKernels/deleteEdges.cu \
+    /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include/Essentials/main/../graphsEditKernels/loadBalancing.cu

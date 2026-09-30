@@ -4,7 +4,7 @@
 
 // #######################INSERT FUNCTION############################
 template <typename EdgesObj>
-__device__ __forceinline__ void DynamicSlabGraph<EdgesObj, true>::insertEdge(bool toInsert, VertexT &src, VertexT &dst, EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynAllocator &localctxt)
+__device__ __forceinline__ void DynamicSlabGraph<EdgesObj, true>::insertEdge(bool toInsert, DynamicSlabGraph<EdgesObj, true>::VertexT &src, DynamicSlabGraph<EdgesObj, true>::VertexT &dst, DynamicSlabGraph<EdgesObj, true>::EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynAllocator &localctxt)
 {
     int workQueue = 0;
     int DestinationVertexBucket = toInsert ? graphVertex[src].computeBucket(dst) : 0xFFFFFFFF;
@@ -26,7 +26,7 @@ __device__ __forceinline__ void DynamicSlabGraph<EdgesObj, true>::insertEdge(boo
     }
 }
 template <typename EdgesObj>
-__device__ __forceinline__ void DynamicSlabGraph<EdgesObj, false>::insertEdge(bool toInsert, VertexT &src, VertexT &dst, int lane, DynamicSlabGraph<EdgesObj, false>::EdgeDynAllocator &localctxt)
+__device__ __forceinline__ void DynamicSlabGraph<EdgesObj, false>::insertEdge(bool toInsert, DynamicSlabGraph<EdgesObj, false>::VertexT &src, DynamicSlabGraph<EdgesObj, false>::VertexT &dst, int lane, DynamicSlabGraph<EdgesObj, false>::EdgeDynAllocator &localctxt)
 {
     int workQueue = 0;
     int DestinationVertexBucket = toInsert ? graphVertex[src].computeBucket(dst) : 0xFFFFFFFF;
@@ -48,9 +48,8 @@ __device__ __forceinline__ void DynamicSlabGraph<EdgesObj, false>::insertEdge(bo
     }
 }
 // ##################################################################
-
-
-// ##########################CUDA KERNELS############################
+//                          CUDA KERNELS
+// ##################################################################
 template <typename EdgesObj>
 __global__ void InsertEdgesKernel(typename DynamicSlabGraph<EdgesObj, true>::VertexT *sourceVertex, typename DynamicSlabGraph<EdgesObj, true>::VertexT *dstVertex, typename DynamicSlabGraph<EdgesObj, true>::EdgeValueT *weigths, int countN, DynamicSlabGraph<EdgesObj, true> theGraph)
 {

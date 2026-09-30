@@ -1,1 +1,1 @@
--I/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include -I/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/src -I/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/SlabHash/SlabAlloc/src -I/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/../thrust
+-I/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/include -I/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/src -I/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/external/SlabHash/SlabAlloc/src -I/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/../thrust

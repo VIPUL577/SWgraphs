@@ -6,7 +6,7 @@
 #include "slab_hash.cuh"
 #include <thrust/execution_policy.h>
 #include <thrust/scan.h>
-#define THREADSPERBLOCK 512 
+#define THREADSPERBLOCK 512
 
 template <bool IsWeighted, typename vertexTy, typename valueTy, typename ContainerPolicyT>
 struct EdgesObj
@@ -26,10 +26,10 @@ OutputIterator ExclusiveScan(InputIterator First, InputIterator Last,
 }
 // ##################################################################
 template <typename SlabAllocPolicyTy, typename CountTy = int>
-using WeightedEdgesObj = EdgesObj<true,int,int,ConcurrentMapPolicy<int, int, SlabAllocPolicyTy>>;
+using WeightedEdgesObj = EdgesObj<true, int, int, ConcurrentMapPolicy<int, int, SlabAllocPolicyTy>>;
 
 template <typename SlabAllocPolicyTy, typename CountTy = int>
-using UnweightedEdgesObj = EdgesObj<false,int,int,ConcurrentSetPolicy<int, SlabAllocPolicyTy>>;
+using UnweightedEdgesObj = EdgesObj<false, int, int, ConcurrentSetPolicy<int, SlabAllocPolicyTy>>;
 
 template <typename EdgesObj, bool Weighted>
 class DynamicSlabGraph;
@@ -59,15 +59,15 @@ private:
     int *h_BucketsPerVertex;
     int *h_BucketsPrefixSum;
 
-    uint32_t       *d_firstUpdatedSlab;
-    uint8_t        *d_firstUpdatedLaneId;
-    int            *d_BucketsPrefixSum;
-    int            *d_EdgesPerBucket;    
-    int            *d_vertexDegree;
-    bool           *d_isSlablistUpdated;
-    uint32_t       *d_headptr;           // buckets head pointers
-    edgeHashCxt    *graphVertex;         // gpu
-    EdgeDynContext graphAlloc;        // gpu
+    uint32_t *d_firstUpdatedSlab;
+    uint8_t *d_firstUpdatedLaneId;
+    int *d_BucketsPrefixSum;
+    int *d_EdgesPerBucket;
+    int *d_vertexDegree;
+    bool *d_isSlablistUpdated;
+    uint32_t *d_headptr;       // buckets head pointers
+    edgeHashCxt *graphVertex;  // gpu
+    EdgeDynContext graphAlloc; // gpu
 
 public:
     DynamicSlabGraph(uint32_t N, int *h_vertexDegree, EdgeDynAllocator &allocator, float loadFactor, uint32_t device_index)
@@ -76,7 +76,7 @@ public:
         h_BucketsPerVertex = new int[N];
         h_BucketsPrefixSum = new int[N];
 
-        dynallocator = allocator; 
+        dynallocator = allocator;
 
         int totalBuckets = 0;
         for (int i = 0; i < N; i++)
@@ -100,7 +100,7 @@ public:
         ExclusiveScan(h_BucketsPerVertex, h_BucketsPerVertex + N, h_BucketsPrefixSum, 0);
 
         for (int i = 0; i < N; i++)
-            VertexHost.emplace_back(reinterpret_cast<int8_t * >(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
+            VertexHost.emplace_back(reinterpret_cast<int8_t *>(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
 
         auto GetContainerHashCtxt = [](auto &Container)
         {
@@ -113,7 +113,7 @@ public:
         CHECK_CUDA_ERROR(cudaMemcpy(graphVertex, tempVertexHost.data(), sizeof(edgeHashCxt) * N, cudaMemcpyHostToDevice));
         CHECK_CUDA_ERROR(cudaMemcpy(d_BucketsPrefixSum, h_BucketsPrefixSum, sizeof(int) * N, cudaMemcpyHostToDevice));
         CHECK_CUDA_ERROR(cudaMemcpy(d_vertexDegree, h_vertexDegree, sizeof(int) * N, cudaMemcpyHostToDevice));
-        CHECK_CUDA_ERROR(cudaMemset(d_EdgesPerBucket,0,sizeof(int) * totalBuckets));
+        CHECK_CUDA_ERROR(cudaMemset(d_EdgesPerBucket, 0, sizeof(int) * totalBuckets));
         graphAlloc = *dynallocator.getContextPtr();
     }
     ~DynamicSlabGraph()
@@ -129,15 +129,22 @@ public:
         CHECK_CUDA_ERROR(cudaFree(graphVertex));
         CHECK_CUDA_ERROR(cudaFree(d_headptr));
     }
-    EdgeDynAllocator GetDynCtxt() {
-        return graphAlloc; 
+    EdgeDynAllocator GetDynCtxt()
+    {
+        return graphAlloc;
     }
-    __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynAllocator &localctxt); 
-    __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane); 
-    void updateEdge(); 
-    void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, int countN); 
-    void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN); 
-    void updateEdges(VertexT* sourceVertex, VertexT* dstVertex, EdgeValueT* weigths, uint32_t countN); 
+    // void exclusiveScanGPU(int *d_data, int N)
+    // {
+    //     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
+    // }
+    __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynAllocator &localctxt);
+    __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
+    void updateEdge();
+    void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, int countN);
+    void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
+    void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
+
+    void updateEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, uint32_t countN);
     // have to write getter functions, destructor, and insert , deletion & update on edges code max(2 hours),
 };
 template <typename EdgesObj>
@@ -164,15 +171,15 @@ private:
     int *h_BucketsPerVertex;
     int *h_BucketsPrefixSum;
 
-    uint32_t       *d_firstUpdatedSlab;
-    uint8_t        *d_firstUpdatedLaneId;
-    int            *d_BucketsPrefixSum;
-    int            *d_EdgesPerBucket;    
-    int            *d_vertexDegree;
-    bool           *d_isSlablistUpdated;
-    uint32_t       *d_headptr;           // buckets head pointers
-    edgeHashCxt    *graphVertex;         // gpu
-    EdgeDynContext graphAlloc;           // gpu
+    uint32_t *d_firstUpdatedSlab;
+    uint8_t *d_firstUpdatedLaneId;
+    int *d_BucketsPrefixSum;
+    int *d_EdgesPerBucket;
+    int *d_vertexDegree;
+    bool *d_isSlablistUpdated;
+    uint32_t *d_headptr;       // buckets head pointers
+    edgeHashCxt *graphVertex;  // gpu
+    EdgeDynContext graphAlloc; // gpu
 
 public:
     DynamicSlabGraph(uint32_t N, int *h_vertexDegree, EdgeDynAllocator &allocator, float loadFactor, uint32_t device_index)
@@ -181,7 +188,7 @@ public:
         h_BucketsPerVertex = new int[N];
         h_BucketsPrefixSum = new int[N];
 
-        dynallocator = allocator; 
+        dynallocator = allocator;
 
         int totalBuckets = 0;
         for (int i = 0; i < N; i++)
@@ -205,7 +212,7 @@ public:
         ExclusiveScan(h_BucketsPerVertex, h_BucketsPerVertex + N, h_BucketsPrefixSum, 0);
 
         for (int i = 0; i < N; i++)
-            VertexHost.emplace_back(reinterpret_cast<int8_t * >(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
+            VertexHost.emplace_back(reinterpret_cast<int8_t *>(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
 
         auto GetContainerHashCtxt = [](auto &Container)
         {
@@ -218,7 +225,7 @@ public:
         CHECK_CUDA_ERROR(cudaMemcpy(graphVertex, tempVertexHost.data(), sizeof(edgeHashCxt) * N, cudaMemcpyHostToDevice));
         CHECK_CUDA_ERROR(cudaMemcpy(d_BucketsPrefixSum, h_BucketsPrefixSum, sizeof(int) * N, cudaMemcpyHostToDevice));
         CHECK_CUDA_ERROR(cudaMemcpy(d_vertexDegree, h_vertexDegree, sizeof(int) * N, cudaMemcpyHostToDevice));
-        CHECK_CUDA_ERROR(cudaMemset(d_EdgesPerBucket,0,sizeof(int) * totalBuckets));
+        CHECK_CUDA_ERROR(cudaMemset(d_EdgesPerBucket, 0, sizeof(int) * totalBuckets));
         graphAlloc = *dynallocator.getContextPtr();
     }
     ~DynamicSlabGraph()
@@ -234,16 +241,24 @@ public:
         CHECK_CUDA_ERROR(cudaFree(graphVertex));
         CHECK_CUDA_ERROR(cudaFree(d_headptr));
     }
-    EdgeDynAllocator GetDynCtxt() {
-        return graphAlloc; 
+    EdgeDynAllocator GetDynCtxt()
+    {
+        return graphAlloc;
     }
-    __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, int lane, DynamicSlabGraph<EdgesObj, false>::EdgeDynAllocator &localctxt); 
-    __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane); 
-    void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN); 
-    void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN); 
+    // void exclusiveScanGPU(int *d_data, int N)
+    // {
+    //     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
+    // }
+    __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, int lane, DynamicSlabGraph<EdgesObj, false>::EdgeDynAllocator &localctxt);
+    __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
+    void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
+    void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
+    void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
 };
 #include "../graphsEditKernels/insertEdges.cu"
 #include "../graphsEditKernels/deleteEdges.cu"
+#include "../graphsEditKernels/loadBalancing.cu"
+
 // #include "../graphsEditKernels/updateEdges.cu"
 
-int main(){}
+int main() {}
