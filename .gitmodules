@@ -1,0 +1,3 @@
+[submodule "external/SlabHash"]
+	path = external/SlabHash
+	url = https://github.com/KevinJudeConcessao/SlabHash.git
