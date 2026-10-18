@@ -44,4 +44,5 @@ void DynamicSlabGraph<EdgesObj, true>::countSlabs(DynamicSlabGraph<EdgesObj, tru
     int blocks = (N + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     countSlabsKernel<DynamicSlabGraph<EdgesObj, true>::edgeHashCxt, DynamicSlabGraph<EdgesObj, true>::VertexT><<<blocks, THREADSPERBLOCK>>>(vertices, currentFrontier, FrontierSlabs, N);
 }
+
 #endif

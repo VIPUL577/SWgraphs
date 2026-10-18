@@ -82,7 +82,7 @@ __global__ void BFSAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier, i
 }
 
 template<typename DynamicSlabGraph, typename VertexT>
-void BFSAdvanceWrapper(DynamicSlabGraph graphClass , VertexT * currentFrontier, VertexT * outgoingFrontier ,VertexT* prefixKeep, int cf_n  , int* slabPrefixSum, int slabsperwarp ){
+int BFSAdvanceWrapper(DynamicSlabGraph graphClass , VertexT * currentFrontier, VertexT * outgoingFrontier ,VertexT* prefixKeep, int cf_n  , int* slabPrefixSum, int slabsperwarp ){
     graphClass.countSlabs(currentFrontier , slabPrefixSum , cf_n); 
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum,slabPrefixSum,cf_n); 
     int noOfThreads = 32*ceil((double)noOfSlabs/slabsPerWarp); 
@@ -93,6 +93,7 @@ void BFSAdvanceWrapper(DynamicSlabGraph graphClass , VertexT * currentFrontier, 
     generate_frontier<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, prefixKeep, graphClass.maxN, currentFrontier);
     initZero<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, graphClass.maxN);
     cudaDeviceSynchronize();
+    return cf_n; 
 }
 
 void BFS()

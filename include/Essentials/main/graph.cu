@@ -143,7 +143,7 @@ public:
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
-    
+    int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
     void updateEdge();
     void updateEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, uint32_t countN);
     // have to write getter functions, destructor, and insert , deletion & update on edges code max(2 hours),
@@ -254,6 +254,7 @@ public:
     __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
+    int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
 };
 #include "../graphsEditKernels/insertEdges.cu"
