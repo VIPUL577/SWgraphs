@@ -27,7 +27,7 @@ __global__ void countSlabsKernel(edgeHashCxt *graphVertex, VertexT *currentFront
             n++;
             it++;
         }
-        FrontierSlabs[node] = n;
+        FrontierSlabs[threadId] = n;
     }
 }
 template <typename EdgesObj>

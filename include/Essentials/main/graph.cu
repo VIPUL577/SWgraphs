@@ -58,6 +58,7 @@ private:
 
     int *h_BucketsPerVertex;
     int *h_BucketsPrefixSum;
+    int maxN ; 
 
     uint32_t *d_firstUpdatedSlab;
     uint8_t *d_firstUpdatedLaneId;
@@ -70,12 +71,12 @@ private:
     EdgeDynContext graphAlloc; // gpu
 
 public:
-    DynamicSlabGraph(uint32_t N, int *h_vertexDegree, EdgeDynAllocator &allocator, float loadFactor, uint32_t device_index)
+    DynamicSlabGraph(int N, int *h_vertexDegree, EdgeDynAllocator &allocator, float loadFactor, uint32_t device_index)
     {
         cudaSetDevice(device_index);
         h_BucketsPerVertex = new int[N];
         h_BucketsPrefixSum = new int[N];
-
+        maxN = N ; 
         dynallocator = allocator;
 
         int totalBuckets = 0;
@@ -86,7 +87,7 @@ public:
             totalBuckets += h_BucketsPerVertex[i];
         }
         CHECK_CUDA_ERROR(cudaMalloc(&d_firstUpdatedSlab, sizeof(uint32_t) * totalBuckets));
-        CHECK_CUDA_ERROR(cudaMalloc(&d_firstUpdatedSlab, sizeof(uint32_t) * totalBuckets));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_firstUpdatedLaneId, sizeof(uint32_t) * totalBuckets));
         CHECK_CUDA_ERROR(cudaMalloc(&d_EdgesPerBucket, sizeof(int) * totalBuckets));
         CHECK_CUDA_ERROR(cudaMalloc(&d_isSlablistUpdated, sizeof(bool) * totalBuckets));
         CHECK_CUDA_ERROR(cudaMalloc(&d_BucketsPrefixSum, sizeof(int) * N));
@@ -139,11 +140,11 @@ public:
     // }
     __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynAllocator &localctxt);
     __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
-    void updateEdge();
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
-
+    
+    void updateEdge();
     void updateEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, uint32_t countN);
     // have to write getter functions, destructor, and insert , deletion & update on edges code max(2 hours),
 };

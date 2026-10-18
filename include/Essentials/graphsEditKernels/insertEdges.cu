@@ -36,7 +36,7 @@ __device__ __forceinline__ void DynamicSlabGraph<EdgesObj, false>::insertEdge(bo
         VertexT currentSrc = __shfl_sync(0xFFFFFFFF, src, currentLane, 32);
         bool sameSrc = (src == currentSrc);
         bool green = toInsert && sameSrc;
-        graphVertex[currentSrc].insertPair(green, lane, dst, DestinationVertexBucket, localctxt);
+        graphVertex[currentSrc].insertKey(green, lane, dst, DestinationVertexBucket, localctxt);
         int InsertionCount = __popc(__ballot_sync(0xFFFFFFFF, green));
         if (lane == 0)
             atomicAdd(d_vertexDegree + currentSrc, InsertionCount);
