@@ -92,7 +92,7 @@ __global__ void SSSPAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier,E
 }
 
 template<typname DynamicSlabGraph,typename VertexT, typename EdgeValueT>
-int SSSPAdvanceWrapper(DynamicSlabGraph graphClass,VertexT* currentFrontier, int* slabPrefixSum,EdgeValueT *minDist ,int cf_n){
+int SSSPAdvanceWrapper(DynamicSlabGraph graphClass,VertexT* currentFrontier,VertexT* outgoingFrontier,VertexT* prefixKeep, int* slabPrefixSum,EdgeValueT *minDist ,int cf_n, int slabsperwarp){
     graphClass.countSlabs(currentFrontier , slabPrefixSum , cf_n); 
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum,slabPrefixSum,cf_n); 
     int noOfThreads = 32*ceil((double)noOfSlabs/slabsPerWarp); 
