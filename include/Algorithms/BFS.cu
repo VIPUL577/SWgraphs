@@ -39,8 +39,15 @@ __global__ void generate_frontier(VertexT *vkeep, VertexT *prefix_vkeep, int V, 
         }
     }
 }
+template <typename VertexT>
+__global__ void setDistance(int *minDist, VertexT *currentFrontier, int cf_n, int distance){
+    int tid = blockIdx.x*blockDim.x + threadIdx.x ; 
+    if(tid<cf_n){
+        minDist[currentFrontier[tid]] = distance; 
+    }
+}
 template <typename VertexT,typename edgeHashCtxt>
-__global__ void BFSAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier, int *SlabPrefixSum, edgeHashCtxt *graph, int cf_n, int noThreads , int slabsPerWarp )
+__global__ void BFSAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier, int *SlabPrefixSum, edgeHashCtxt *graph, int cf_n, int noThreads , int slabsperwarp )
 { /*
     1) ADD MASK IF THE VERTEX IS VALID OR NOT, OR DELETED OR THE VERTEX HAS ZERO NEIGHBOURS(WHILE LOOP)
     2) TAKE CARE END POINTS
@@ -51,9 +58,9 @@ __global__ void BFSAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier, i
     if(tid < noThreads){
         
         int warpId = tid/32; 
-        int begin = warpId * slabsPerWarp ; 
-        int end = (warpId+1) * slabsPerWarp; 
-        int lane = tid & 0xFF; 
+        int begin = warpId * slabsperwarp ; 
+        int end = (warpId+1) * slabsperwarp; 
+        int lane = tid & 0x1F; 
 
         int binaryStart = 0; 
         int binaryEnd = cf_n -1 ; 
@@ -69,7 +76,7 @@ __global__ void BFSAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier, i
         auto startIt = graph[currentFrontier[binaryStart]].Begin();
         for(int i = 0 ; i < offset ; ++i , ++startIt);
         auto endIt = graph[currentFrontier[binaryStart]].End();
-        for(int i = start ; i<end ; i++){ 
+        for(int i = begin ; i<end ; i++){ 
             outgoingFrontier[*startIt.GetPointer(lane)] = 1; 
             startIt++ ; 
             if(startIt == endIt){
@@ -82,21 +89,26 @@ __global__ void BFSAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier, i
 }
 
 template<typename DynamicSlabGraph, typename VertexT>
-int BFSAdvanceWrapper(DynamicSlabGraph graphClass , VertexT * currentFrontier, VertexT * outgoingFrontier ,VertexT* prefixKeep, int cf_n, int* slabPrefixSum, int slabsperwarp){
+int BFSAdvanceWrapper(DynamicSlabGraph graphClass ,int* minDist, int currentDistance ,VertexT * currentFrontier, VertexT * outgoingFrontier ,VertexT* prefixKeep, int cf_n, int* slabPrefixSum, int slabsperwarp){
     graphClass.countSlabs(currentFrontier , slabPrefixSum , cf_n); 
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum,slabPrefixSum,cf_n); 
-    int noOfThreads = 32*ceil((double)noOfSlabs/slabsPerWarp); 
+    int noOfThreads = 32*ceil((double)noOfSlabs/    ); 
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    BFSAdvance<VertexT,DynamicSlabGraph::edgeHashCxt><<<grid,THREADSPERBLOCK>>>(currentFrontier,outgoingFrontier,slabPrefixSum,graphClass.graphVertex,cf_n,noOfThreads,slabsperwarp);
-    int cf_n = getNumberSlabs<VertexT>(outgoingFrontier, prefixKeep , graphClass.maxN); 
+    BFSAdvance<VertexT,DynamicSlabGraph::edgeHashCxt><<<grid,THREADSPERBLOCK>>>(currentFrontier,outgoingFrontier,slabPrefixSum,graphClass.getVertexContexts(),cf_n,noOfThreads,slabsperwarp);
+    cf_n = getNumberSlabs<VertexT>(outgoingFrontier, prefixKeep , graphClass.getNumVertices()); 
     grid = (cf_n + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    generate_frontier<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, prefixKeep, graphClass.maxN, currentFrontier);
-    initZero<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, graphClass.maxN);
+    generate_frontier<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, prefixKeep, graphClass.getNumVertices(), currentFrontier);
+    initZero<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, graphClass.getNumVertices());
+    setDistance<VertexT><<<grid,THREADSPERBLOCK>>>(minDist,currentFrontier, cf_n, currentDistance); 
     cudaDeviceSynchronize();
     return cf_n; 
 }
-
-void BFS()
+template<typename DynamicSlabGraph, typename VertexT>
+void BFS(DynamicSlabGraph graphClass ,int* minDist,VertexT * currentFrontier, VertexT * outgoingFrontier ,VertexT* prefixKeep, int cf_n, int* slabPrefixSum, int slabsperwarp)
 {
-    
+    int distance = 1 ;
+    while(cf_n>0){
+        BFSAdvanceWrapper(graphClass,minDist,distance,currentFrontier,outgoingFrontier,prefixKeep,cf_n,slabPrefixSum,slabsperwarp); 
+        distance++ 
+    } 
 }

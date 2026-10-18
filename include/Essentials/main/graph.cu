@@ -146,6 +146,8 @@ public:
     int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
     void updateEdge();
     void updateEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, uint32_t countN);
+    edgeHashCxt *getVertexContexts() const { return graphVertex; }  // device pointer
+    int getNumVertices() const { return maxN; }
     // have to write getter functions, destructor, and insert , deletion & update on edges code max(2 hours),
 };
 template <typename EdgesObj>
@@ -256,6 +258,9 @@ public:
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
+
+    edgeHashCxt *getVertexContexts() const { return graphVertex; }  // device pointer
+    int getNumVertices() const { return maxN; }
 };
 #include "../graphsEditKernels/insertEdges.cu"
 #include "../graphsEditKernels/deleteEdges.cu"

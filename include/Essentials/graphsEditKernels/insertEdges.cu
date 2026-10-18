@@ -72,8 +72,8 @@ __global__ void InsertEdgesKernel(typename DynamicSlabGraph<EdgesObj, true>::Ver
     typename DynamicSlabGraph<EdgesObj, true>::EdgeDynAllocator localctxt(theGraph.GetDynCtxt()); 
     localctxt.initAllocator(threadID, lane);
     theGraph.insertEdge(insert, src , dst , weight , lane ,localctxt) ; 
-
 }
+
 template <typename EdgesObj>
 __global__ void InsertEdgesKernel(typename DynamicSlabGraph<EdgesObj, false>::VertexT *sourceVertex, typename DynamicSlabGraph<EdgesObj, false>::VertexT *dstVertex, int countN, DynamicSlabGraph<EdgesObj, false> theGraph)
 {
