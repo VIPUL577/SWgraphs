@@ -1,4 +1,3 @@
-
 #ifndef INSERT_EDGES_CU_
 #define INSERT_EDGES_CU_
 
@@ -43,31 +42,39 @@ void insertWeightedEdge(
         bool sameSrc = (src == currentSrc);
         bool green = toInsert && sameSrc;
 
+        // insertPair takes bool& and clears it on success.
+        // Give it a copy so 'green' survives for counting.
+        bool pending = green;
+
         graphVertex[currentSrc].insertPair(
-            green,
+            pending,
             lane,
             dst,
             weight,
             destinationBucket,
             localctxt);
 
-        int insertionCount =
-            __popc(__ballot_sync(0xFFFFFFFF, green));
+        bool inserted = green && !pending;
 
-        if (lane == 0)
+        int insertionCount =
+            __popc(__ballot_sync(0xFFFFFFFF, inserted));
+
+        if (lane == 0 && insertionCount > 0)
         {
             atomicAdd(d_vertexDegree + currentSrc, insertionCount);
         }
 
-        if (green)
+        if (inserted)
         {
             atomicAdd(
                 &d_EdgesPerBucket[
                     d_BucketsPrefixSum[currentSrc] + destinationBucket],
                 1);
-
-            toInsert = false;
         }
+
+        // Retire lanes using the ORIGINAL variables (same as reference).
+        if (toInsert && sameSrc)
+            toInsert = false;
     }
 }
 
@@ -106,7 +113,9 @@ void insertUnweightedEdge(
         bool sameSrc = (src == currentSrc);
         bool green = toInsert && sameSrc;
 
-        graphVertex[currentSrc].insertKey(
+        // insertKey clears 'green' itself and RETURNS true only when
+        // the key was newly inserted (duplicates return false).
+        bool inserted = graphVertex[currentSrc].insertKey(
             green,
             lane,
             dst,
@@ -114,28 +123,29 @@ void insertUnweightedEdge(
             localctxt);
 
         int insertionCount =
-            __popc(__ballot_sync(0xFFFFFFFF, green));
+            __popc(__ballot_sync(0xFFFFFFFF, inserted));
 
-        if (lane == 0)
+        if (lane == 0 && insertionCount > 0)
         {
             atomicAdd(d_vertexDegree + currentSrc, insertionCount);
         }
 
-        if (green)
+        if (inserted)
         {
             atomicAdd(
                 &d_EdgesPerBucket[
                     d_BucketsPrefixSum[currentSrc] + destinationBucket],
                 1);
-
-            toInsert = false;
         }
+
+        // Retire lanes using the ORIGINAL variables (same as reference).
+        if (toInsert && sameSrc)
+            toInsert = false;
     }
 }
 
 // ================================================================
 // WEIGHTED INSERTION KERNEL
-// Pass device pointers and allocator context, NOT the whole graph.
 // ================================================================
 
 template <typename EdgesObj, typename GraphVertexPtrT>
