@@ -101,8 +101,8 @@ public:
         ExclusiveScan(h_BucketsPerVertex, h_BucketsPerVertex + N, h_BucketsPrefixSum, 0);
 
         for (int i = 0; i < N; i++)
-            VertexHost.emplace_back(reinterpret_cast<int8_t *>(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
-
+            // VertexHost.emplace_back(reinterpret_cast<int8_t *>(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
+            VertexHost.emplace_back(reinterpret_cast<int8_t *>(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], d_isSlablistUpdated + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
         auto GetContainerHashCtxt = [](auto &Container)
         {
             return Container.getSlabHashContext();
@@ -134,7 +134,7 @@ public:
     // {
     //     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
     // }
-    __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynAllocator &localctxt);
+    __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynContext &localctxt);
     __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
@@ -143,7 +143,10 @@ public:
     // void updateEdge();
     // void updateEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, uint32_t countN);
 
-    EdgeDynAllocator GetDynCtxt(){  return graphAlloc; }
+    __host__ __device__ __forceinline__
+    EdgeDynContext GetDynCtxt() const {
+        return graphAlloc;
+    }
     edgeHashCxt *getVertexContexts() const { return graphVertex; }  // device pointer
     int getNumVertices() const { return maxN; }
     // have to write getter functions, destructor, and insert , deletion & update on edges code max(2 hours),
@@ -214,7 +217,9 @@ public:
         ExclusiveScan(h_BucketsPerVertex, h_BucketsPerVertex + N, h_BucketsPrefixSum, 0);
 
         for (int i = 0; i < N; i++)
-            VertexHost.emplace_back(reinterpret_cast<int8_t *>(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
+            VertexHost.emplace_back(reinterpret_cast<int8_t *>(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], d_isSlablistUpdated + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
+
+            // VertexHost.emplace_back(reinterpret_cast<int8_t *>(d_headptr) + 128 * h_BucketsPrefixSum[i], d_firstUpdatedSlab + h_BucketsPrefixSum[i], d_firstUpdatedLaneId + h_BucketsPrefixSum[i], h_BucketsPerVertex[i], &allocator, device_index);
 
         auto GetContainerHashCtxt = [](auto &Container)
         {
@@ -247,14 +252,17 @@ public:
     // {
     //     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
     // }
-    __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, int lane, DynamicSlabGraph<EdgesObj, false>::EdgeDynAllocator &localctxt);
+    __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, int lane, DynamicSlabGraph<EdgesObj, false>::EdgeDynContext &localctxt);
     __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     // int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
 
-    EdgeDynAllocator GetDynCtxt(){  return graphAlloc; }
+    __host__ __device__ __forceinline__
+    EdgeDynContext GetDynCtxt() const {
+        return graphAlloc;
+    }
     edgeHashCxt *getVertexContexts() const { return graphVertex; }  // device pointer
     int getNumVertices() const { return maxN; }
 };

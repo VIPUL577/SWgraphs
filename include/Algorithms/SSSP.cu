@@ -71,7 +71,7 @@ __global__ void SSSPAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier,E
         auto endIt = graph[currentVertex].End();
         for(int i = begin ; i<end ; i++){ 
             auto tentativeV = *startIt.GetPointer(lane); 
-            auto edgeWeight = __shfl_down(tentativeV,1); 
+            auto edgeWeight = __shfl_down_sync(0xffffffff,tentativeV,1); 
             if(((1 << lane) & 0x15555555) && (tentativeV != EMPTY_KEY) &&(tentativeV != TOMBSTONE_KEY)&&(currentVertex != tentativeV)){
             EdgeValueT newDist = minDist[currentVertex] + edgeWeight ; 
             EdgeValueT old = atomicMin(&minDist[tentativeV],newDist); 
@@ -95,7 +95,7 @@ int SSSPAdvanceWrapper(DynamicSlabGraph graphClass,VertexT* currentFrontier,Vert
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum,slabPrefixSum,cf_n); 
     int noOfThreads = 32*ceil((double)noOfSlabs/slabsperwarp); 
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    SSSPAdvance<VertexT, EdgeValueT, DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp ); 
+    SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp ); 
     cf_n = getNumberSlabs<VertexT>(outgoingFrontier, prefixKeep , graphClass.getNumVertices()); 
     grid = (cf_n + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     generate_frontier<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, prefixKeep, graphClass.getNumVertices(), currentFrontier);
@@ -108,6 +108,7 @@ template<typename DynamicSlabGraph,typename VertexT, typename EdgeValueT>
 void SSSP(DynamicSlabGraph graphClass,VertexT* currentFrontier,VertexT* outgoingFrontier,VertexT* prefixKeep, int* slabPrefixSum,EdgeValueT *minDist ,int cf_n, int slabsperwarp){
     while (cf_n>0)
     {
+        std::cout<<cf_n<<std::endl; 
         cf_n = SSSPAdvanceWrapper<DynamicSlabGraph,VertexT,EdgeValueT>(graphClass,currentFrontier,outgoingFrontier,prefixKeep,slabPrefixSum,minDist,cf_n,slabsperwarp); 
     }
 }
