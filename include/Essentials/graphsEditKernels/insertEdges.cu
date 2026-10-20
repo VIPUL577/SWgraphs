@@ -1,120 +1,309 @@
+
 #ifndef INSERT_EDGES_CU_
 #define INSERT_EDGES_CU_
 
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
 
-// #######################INSERT FUNCTION############################
-template <typename EdgesObj>
-__device__ __forceinline__ void DynamicSlabGraph<EdgesObj, true>::insertEdge(bool toInsert, DynamicSlabGraph<EdgesObj, true>::VertexT &src, DynamicSlabGraph<EdgesObj, true>::VertexT &dst, DynamicSlabGraph<EdgesObj, true>::EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynContext &localctxt)
+// ================================================================
+// WEIGHTED EDGE INSERTION
+// ================================================================
+
+template <
+    typename GraphVertexPtrT,
+    typename VertexT,
+    typename EdgeValueT,
+    typename EdgeDynContextT>
+__device__ __forceinline__
+void insertWeightedEdge(
+    bool toInsert,
+    VertexT& src,
+    VertexT& dst,
+    EdgeValueT& weight,
+    int lane,
+    GraphVertexPtrT graphVertex,
+    int* d_vertexDegree,
+    int* d_BucketsPrefixSum,
+    int* d_EdgesPerBucket,
+    EdgeDynContextT& localctxt)
 {
     int workQueue = 0;
-    int DestinationVertexBucket = toInsert ? graphVertex[src].computeBucket(dst) : 0xFFFFFFFF;
+
+    int destinationBucket =
+        toInsert ? graphVertex[src].computeBucket(dst) : 0xFFFFFFFF;
+
     while ((workQueue = __ballot_sync(0xFFFFFFFF, toInsert)) != 0)
     {
         int currentLane = __ffs(workQueue) - 1;
-        VertexT currentSrc = __shfl_sync(0xFFFFFFFF, src, currentLane, 32);
+
+        VertexT currentSrc =
+            __shfl_sync(0xFFFFFFFF, src, currentLane, 32);
+
         bool sameSrc = (src == currentSrc);
         bool green = toInsert && sameSrc;
-        graphVertex[currentSrc].insertPair(green, lane, dst, weight, DestinationVertexBucket, localctxt);
-        int InsertionCount = __popc(__ballot_sync(0xFFFFFFFF, green));
+
+        graphVertex[currentSrc].insertPair(
+            green,
+            lane,
+            dst,
+            weight,
+            destinationBucket,
+            localctxt);
+
+        int insertionCount =
+            __popc(__ballot_sync(0xFFFFFFFF, green));
+
         if (lane == 0)
-            atomicAdd(d_vertexDegree + currentSrc, InsertionCount);
+        {
+            atomicAdd(d_vertexDegree + currentSrc, insertionCount);
+        }
+
         if (green)
         {
-            atomicAdd(&d_EdgesPerBucket[d_BucketsPrefixSum[currentSrc] + DestinationVertexBucket], 1);
+            atomicAdd(
+                &d_EdgesPerBucket[
+                    d_BucketsPrefixSum[currentSrc] + destinationBucket],
+                1);
+
             toInsert = false;
         }
     }
 }
-template <typename EdgesObj>
-__device__ __forceinline__ void DynamicSlabGraph<EdgesObj, false>::insertEdge(bool toInsert, DynamicSlabGraph<EdgesObj, false>::VertexT &src, DynamicSlabGraph<EdgesObj, false>::VertexT &dst, int lane, DynamicSlabGraph<EdgesObj, false>::EdgeDynContext &localctxt)
+
+// ================================================================
+// UNWEIGHTED EDGE INSERTION
+// ================================================================
+
+template <
+    typename GraphVertexPtrT,
+    typename VertexT,
+    typename EdgeDynContextT>
+__device__ __forceinline__
+void insertUnweightedEdge(
+    bool toInsert,
+    VertexT& src,
+    VertexT& dst,
+    int lane,
+    GraphVertexPtrT graphVertex,
+    int* d_vertexDegree,
+    int* d_BucketsPrefixSum,
+    int* d_EdgesPerBucket,
+    EdgeDynContextT& localctxt)
 {
     int workQueue = 0;
-    int DestinationVertexBucket = toInsert ? graphVertex[src].computeBucket(dst) : 0xFFFFFFFF;
+
+    int destinationBucket =
+        toInsert ? graphVertex[src].computeBucket(dst) : 0xFFFFFFFF;
+
     while ((workQueue = __ballot_sync(0xFFFFFFFF, toInsert)) != 0)
     {
         int currentLane = __ffs(workQueue) - 1;
-        VertexT currentSrc = __shfl_sync(0xFFFFFFFF, src, currentLane, 32);
+
+        VertexT currentSrc =
+            __shfl_sync(0xFFFFFFFF, src, currentLane, 32);
+
         bool sameSrc = (src == currentSrc);
         bool green = toInsert && sameSrc;
-        graphVertex[currentSrc].insertKey(green, lane, dst, DestinationVertexBucket, localctxt);
-        int InsertionCount = __popc(__ballot_sync(0xFFFFFFFF, green));
+
+        graphVertex[currentSrc].insertKey(
+            green,
+            lane,
+            dst,
+            destinationBucket,
+            localctxt);
+
+        int insertionCount =
+            __popc(__ballot_sync(0xFFFFFFFF, green));
+
         if (lane == 0)
-            atomicAdd(d_vertexDegree + currentSrc, InsertionCount);
+        {
+            atomicAdd(d_vertexDegree + currentSrc, insertionCount);
+        }
+
         if (green)
         {
-            atomicAdd(&d_EdgesPerBucket[d_BucketsPrefixSum[currentSrc] + DestinationVertexBucket], 1);
+            atomicAdd(
+                &d_EdgesPerBucket[
+                    d_BucketsPrefixSum[currentSrc] + destinationBucket],
+                1);
+
             toInsert = false;
         }
     }
 }
-// ##################################################################
-//                          CUDA KERNELS
-// ##################################################################
-template <typename EdgesObj>
-__global__ void InsertEdgesKernel(typename DynamicSlabGraph<EdgesObj, true>::VertexT *sourceVertex, typename DynamicSlabGraph<EdgesObj, true>::VertexT *dstVertex, typename DynamicSlabGraph<EdgesObj, true>::EdgeValueT *weigths, int countN, DynamicSlabGraph<EdgesObj, true> theGraph)
-{
-    int threadID = blockIdx.x * blockDim.x + threadIdx.x;
-    int lane = threadID % 32;
 
+// ================================================================
+// WEIGHTED INSERTION KERNEL
+// Pass device pointers and allocator context, NOT the whole graph.
+// ================================================================
+
+template <typename EdgesObj, typename GraphVertexPtrT>
+__global__
+void InsertEdgesKernel(
+    typename DynamicSlabGraph<EdgesObj, true>::VertexT* sourceVertex,
+    typename DynamicSlabGraph<EdgesObj, true>::VertexT* dstVertex,
+    typename DynamicSlabGraph<EdgesObj, true>::EdgeValueT* weights,
+    int countN,
+    GraphVertexPtrT graphVertex,
+    int* d_vertexDegree,
+    int* d_BucketsPrefixSum,
+    int* d_EdgesPerBucket,
+    typename DynamicSlabGraph<EdgesObj, true>::EdgeDynContext graphAlloc)
+{
+    using Graph = DynamicSlabGraph<EdgesObj, true>;
+    using VertexT = typename Graph::VertexT;
+    using EdgeValueT = typename Graph::EdgeValueT;
+    using EdgeDynContext = typename Graph::EdgeDynContext;
+
+    int threadID = blockIdx.x * blockDim.x + threadIdx.x;
+    int lane = threadID & 31;
+
+    // Entire warps return together, preserving full-mask warp operations.
     if (threadID - lane >= countN)
         return;
-    typename DynamicSlabGraph<EdgesObj, true>::VertexT src{}; 
-    typename DynamicSlabGraph<EdgesObj, true>::VertexT dst{} ; 
-    typename DynamicSlabGraph<EdgesObj, true>::EdgeValueT weight{} ;
+
+    VertexT src{};
+    VertexT dst{};
+    EdgeValueT weight{};
     bool insert = false;
+
     if (threadID < countN)
     {
         src = sourceVertex[threadID];
         dst = dstVertex[threadID];
-        weight = weigths[threadID];
-        insert = (src!=dst); 
+        weight = weights[threadID];
+
+        insert = (src != dst);
     }
-    typename DynamicSlabGraph<EdgesObj, true>::EdgeDynContext localctxt(theGraph.GetDynCtxt()); 
+
+    EdgeDynContext localctxt(graphAlloc);
+
     uint32_t tid = static_cast<uint32_t>(threadID);
     uint32_t laneId = static_cast<uint32_t>(lane);
 
     localctxt.initAllocator(tid, laneId);
-    theGraph.insertEdge(insert, src , dst , weight , lane ,localctxt) ; 
+
+    insertWeightedEdge(
+        insert,
+        src,
+        dst,
+        weight,
+        lane,
+        graphVertex,
+        d_vertexDegree,
+        d_BucketsPrefixSum,
+        d_EdgesPerBucket,
+        localctxt);
 }
 
-template <typename EdgesObj>
-__global__ void InsertEdgesKernel(typename DynamicSlabGraph<EdgesObj, false>::VertexT *sourceVertex, typename DynamicSlabGraph<EdgesObj, false>::VertexT *dstVertex, int countN, DynamicSlabGraph<EdgesObj, false> theGraph)
+// ================================================================
+// UNWEIGHTED INSERTION KERNEL
+// ================================================================
+
+template <typename EdgesObj, typename GraphVertexPtrT>
+__global__
+void InsertEdgesKernel(
+    typename DynamicSlabGraph<EdgesObj, false>::VertexT* sourceVertex,
+    typename DynamicSlabGraph<EdgesObj, false>::VertexT* dstVertex,
+    int countN,
+    GraphVertexPtrT graphVertex,
+    int* d_vertexDegree,
+    int* d_BucketsPrefixSum,
+    int* d_EdgesPerBucket,
+    typename DynamicSlabGraph<EdgesObj, false>::EdgeDynContext graphAlloc)
 {
+    using Graph = DynamicSlabGraph<EdgesObj, false>;
+    using VertexT = typename Graph::VertexT;
+    using EdgeDynContext = typename Graph::EdgeDynContext;
+
     int threadID = blockIdx.x * blockDim.x + threadIdx.x;
-    int lane = threadID % 32;
+    int lane = threadID & 31;
 
     if (threadID - lane >= countN)
         return;
-    typename DynamicSlabGraph<EdgesObj, false>::VertexT src{}; 
-    typename DynamicSlabGraph<EdgesObj, false>::VertexT dst{} ; 
+
+    VertexT src{};
+    VertexT dst{};
     bool insert = false;
+
     if (threadID < countN)
     {
         src = sourceVertex[threadID];
         dst = dstVertex[threadID];
-        insert = (src!=dst); 
+
+        insert = (src != dst);
     }
-    typename DynamicSlabGraph<EdgesObj, false>::EdgeDynContext localctxt(theGraph.GetDynCtxt()); 
+
+    EdgeDynContext localctxt(graphAlloc);
+
     uint32_t tid = static_cast<uint32_t>(threadID);
     uint32_t laneId = static_cast<uint32_t>(lane);
 
     localctxt.initAllocator(tid, laneId);
-    theGraph.insertEdge(insert, src , dst , lane ,localctxt); 
 
+    insertUnweightedEdge(
+        insert,
+        src,
+        dst,
+        lane,
+        graphVertex,
+        d_vertexDegree,
+        d_BucketsPrefixSum,
+        d_EdgesPerBucket,
+        localctxt);
 }
-// ##################################################################
+
+// ================================================================
+// HOST METHODS
+// ================================================================
 
 template <typename EdgesObj>
-void DynamicSlabGraph<EdgesObj, true>::insertEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, int countN)
+void DynamicSlabGraph<EdgesObj, true>::insertEdges(
+    VertexT* sourceVertex,
+    VertexT* dstVertex,
+    EdgeValueT* weights,
+    int countN)
 {
-    int blocks = (countN+THREADSPERBLOCK-1)/THREADSPERBLOCK ; 
-    InsertEdgesKernel<EdgesObj><<<blocks , THREADSPERBLOCK>>>(sourceVertex , dstVertex , weigths , countN , *this);  
+    if (countN <= 0)
+        return;
+
+    int blocks = (countN + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+
+    InsertEdgesKernel<EdgesObj, decltype(graphVertex)>
+        <<<blocks, THREADSPERBLOCK>>>(
+            sourceVertex,
+            dstVertex,
+            weights,
+            countN,
+            graphVertex,
+            d_vertexDegree,
+            d_BucketsPrefixSum,
+            d_EdgesPerBucket,
+            GetDynCtxt());
 }
+
 template <typename EdgesObj>
-void DynamicSlabGraph<EdgesObj, false>::insertEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN)
+void DynamicSlabGraph<EdgesObj, false>::insertEdges(
+    VertexT* sourceVertex,
+    VertexT* dstVertex,
+    int countN)
 {
-    int blocks = (countN+THREADSPERBLOCK-1)/THREADSPERBLOCK ; 
-    InsertEdgesKernel<EdgesObj><<<blocks , THREADSPERBLOCK>>>(sourceVertex , dstVertex , countN , *this);  
+    if (countN <= 0)
+        return;
+
+    int blocks = (countN + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+
+    InsertEdgesKernel<EdgesObj, decltype(graphVertex)>
+        <<<blocks, THREADSPERBLOCK>>>(
+            sourceVertex,
+            dstVertex,
+            countN,
+            graphVertex,
+            d_vertexDegree,
+            d_BucketsPrefixSum,
+            d_EdgesPerBucket,
+            GetDynCtxt());
 }
 
 #endif
