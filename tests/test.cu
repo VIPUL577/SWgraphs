@@ -9,12 +9,15 @@
 #include <time.h>
 #include "../include/Algorithms/SSSP.cu"
 
+using namespace std; 
+
+int INF = INT_MAX; 
 using AllocPolicy = FullAllocatorPolicy<8, 32, 1>;
 using WeightedObj = WeightedEdgesObj<AllocPolicy>;
 using Graph = DynamicSlabGraph<WeightedObj, true>;
 
 bool file_to_array(string filepath,
-                   vector<int> &src, vector<int> &dst, vector<int> &weights,
+                   std::vector<int> &src, std::vector<int> &dst, std::vector<int> &weights,
                    int &V, int &E)
 {
     std::ifstream file(filepath);
@@ -177,8 +180,8 @@ void runSSSP(
     cout << "#########SSSP GUNROCK########" << endl;
     cout << "vertices           : " << V << '\n';
     cout << "edges              : " << E << '\n';
-    cout << "source             : " << Source_node << endl;
-    cout << "MAX Distance       : " << maxi << endl;
+    cout << "source             : " << source << endl;
+    cout << "MAX Distance       : " << maxDist << endl;
     printf( "Time Taken (GPU)   : %f ms\n", (((double)enddd - (double)starttt) / CLOCKS_PER_SEC) * 1000);
     cudaFree(d_src);
     cudaFree(d_dst);
@@ -199,12 +202,12 @@ int main(int argc, char* argv[]) {
     string filepath = argv[1];
     int V = 0 ; 
     int E = 0 ; 
-    vector<int> src; 
-    vector<int> dst; 
-    vector<int> weights; 
+    std::vector<int> src; 
+    std::vector<int> dst; 
+    std::vector<int> weights; 
 
     if(file_to_array(filepath,src,dst,weights,V,E))    
-        runSSSP(src, dst, weights, V, E, 0);
+        runSSSP(src.data(), dst.data(), weights.data(), V, E, 100);
 
     return 0;
 }

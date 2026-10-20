@@ -72,7 +72,7 @@ __global__ void SSSPAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier,E
         for(int i = begin ; i<end ; i++){ 
             auto tentativeV = *startIt.GetPointer(lane); 
             auto edgeWeight = __shfl_down(tentativeV,1); 
-            if(((1 << Warp.thread_rank()) & 0x15555555) && (tentativeV != EMPTY_KEY) &&(tentativeV != TOMBSTONE_KEY)&&(currentVertex != tentativeV)){
+            if(((1 << lane) & 0x15555555) && (tentativeV != EMPTY_KEY) &&(tentativeV != TOMBSTONE_KEY)&&(currentVertex != tentativeV)){
             EdgeValueT newDist = minDist[currentVertex] + edgeWeight ; 
             EdgeValueT old = atomicMin(&minDist[tentativeV],newDist); 
             if(newDist < old)

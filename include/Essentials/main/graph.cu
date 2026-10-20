@@ -13,7 +13,7 @@ struct EdgesObj
 {
     using VertexT = vertexTy;
     using EdgeValueT = valueTy;
-    using containerPolicy = ContainerPolicyT;
+    using ContainerPolicy = ContainerPolicyT;
 
     const bool isWeighted = IsWeighted;
 };
@@ -139,9 +139,9 @@ public:
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
-    int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
-    void updateEdge();
-    void updateEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, uint32_t countN);
+    // int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
+    // void updateEdge();
+    // void updateEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, uint32_t countN);
 
     EdgeDynAllocator GetDynCtxt(){  return graphAlloc; }
     edgeHashCxt *getVertexContexts() const { return graphVertex; }  // device pointer
@@ -251,7 +251,7 @@ public:
     __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
-    int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
+    // int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
 
     EdgeDynAllocator GetDynCtxt(){  return graphAlloc; }
@@ -260,8 +260,7 @@ public:
 };
 #include "../graphsEditKernels/insertEdges.cu"
 #include "../graphsEditKernels/deleteEdges.cu"
-#include "../graphsEditKernels/loadBalancing.cu"
+#include "../graphsEditKernels/loadbalancing.cu"
 
 // #include "../graphsEditKernels/updateEdges.cu"
 
-int main() {}

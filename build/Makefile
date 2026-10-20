@@ -117,41 +117,41 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named graph
+# Target rules for targets named test_sssp
 
 # Build rule for target.
-graph: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 graph
-.PHONY : graph
+test_sssp: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_sssp
+.PHONY : test_sssp
 
 # fast build rule for target.
-graph/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/graph.dir/build.make CMakeFiles/graph.dir/build
-.PHONY : graph/fast
+test_sssp/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sssp.dir/build.make CMakeFiles/test_sssp.dir/build
+.PHONY : test_sssp/fast
 
-include/Essentials/main/graph.o: include/Essentials/main/graph.cu.o
-.PHONY : include/Essentials/main/graph.o
+tests/test.o: tests/test.cu.o
+.PHONY : tests/test.o
 
 # target to build an object file
-include/Essentials/main/graph.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/graph.dir/build.make CMakeFiles/graph.dir/include/Essentials/main/graph.cu.o
-.PHONY : include/Essentials/main/graph.cu.o
+tests/test.cu.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sssp.dir/build.make CMakeFiles/test_sssp.dir/tests/test.cu.o
+.PHONY : tests/test.cu.o
 
-include/Essentials/main/graph.i: include/Essentials/main/graph.cu.i
-.PHONY : include/Essentials/main/graph.i
+tests/test.i: tests/test.cu.i
+.PHONY : tests/test.i
 
 # target to preprocess a source file
-include/Essentials/main/graph.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/graph.dir/build.make CMakeFiles/graph.dir/include/Essentials/main/graph.cu.i
-.PHONY : include/Essentials/main/graph.cu.i
+tests/test.cu.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sssp.dir/build.make CMakeFiles/test_sssp.dir/tests/test.cu.i
+.PHONY : tests/test.cu.i
 
-include/Essentials/main/graph.s: include/Essentials/main/graph.cu.s
-.PHONY : include/Essentials/main/graph.s
+tests/test.s: tests/test.cu.s
+.PHONY : tests/test.s
 
 # target to generate assembly for a file
-include/Essentials/main/graph.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/graph.dir/build.make CMakeFiles/graph.dir/include/Essentials/main/graph.cu.s
-.PHONY : include/Essentials/main/graph.cu.s
+tests/test.cu.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sssp.dir/build.make CMakeFiles/test_sssp.dir/tests/test.cu.s
+.PHONY : tests/test.cu.s
 
 # Help Target
 help:
@@ -161,10 +161,10 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... graph"
-	@echo "... include/Essentials/main/graph.o"
-	@echo "... include/Essentials/main/graph.i"
-	@echo "... include/Essentials/main/graph.s"
+	@echo "... test_sssp"
+	@echo "... tests/test.o"
+	@echo "... tests/test.i"
+	@echo "... tests/test.s"
 .PHONY : help
 
 
