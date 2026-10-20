@@ -130,10 +130,6 @@ public:
         CHECK_CUDA_ERROR(cudaFree(graphVertex));
         CHECK_CUDA_ERROR(cudaFree(d_headptr));
     }
-    EdgeDynAllocator GetDynCtxt()
-    {
-        return graphAlloc;
-    }
     // void exclusiveScanGPU(int *d_data, int N)
     // {
     //     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
@@ -146,6 +142,8 @@ public:
     int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
     void updateEdge();
     void updateEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, uint32_t countN);
+
+    EdgeDynAllocator GetDynCtxt(){  return graphAlloc; }
     edgeHashCxt *getVertexContexts() const { return graphVertex; }  // device pointer
     int getNumVertices() const { return maxN; }
     // have to write getter functions, destructor, and insert , deletion & update on edges code max(2 hours),
@@ -174,6 +172,7 @@ private:
     int *h_BucketsPerVertex;
     int *h_BucketsPrefixSum;
 
+    int maxN; 
     uint32_t *d_firstUpdatedSlab;
     uint8_t *d_firstUpdatedLaneId;
     int *d_BucketsPrefixSum;
@@ -192,7 +191,7 @@ public:
         h_BucketsPrefixSum = new int[N];
 
         dynallocator = allocator;
-
+        maxN = N ;  
         int totalBuckets = 0;
         for (int i = 0; i < N; i++)
         {
@@ -244,10 +243,6 @@ public:
         CHECK_CUDA_ERROR(cudaFree(graphVertex));
         CHECK_CUDA_ERROR(cudaFree(d_headptr));
     }
-    EdgeDynAllocator GetDynCtxt()
-    {
-        return graphAlloc;
-    }
     // void exclusiveScanGPU(int *d_data, int N)
     // {
     //     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
@@ -259,6 +254,7 @@ public:
     int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
 
+    EdgeDynAllocator GetDynCtxt(){  return graphAlloc; }
     edgeHashCxt *getVertexContexts() const { return graphVertex; }  // device pointer
     int getNumVertices() const { return maxN; }
 };
