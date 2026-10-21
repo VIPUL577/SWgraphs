@@ -80,7 +80,6 @@ void runSSSP(
 {
     if (V <= 0 || E < 0 || source < 0 || source >= V)
         throw std::invalid_argument("Invalid graph dimensions/source");
-    std::cout << "startting SSSP" << std::endl;
     std::vector<int> degree(V, 0);
 
     for (int i = 0; i < E; ++i)
@@ -95,7 +94,6 @@ void runSSSP(
 
         ++degree[src[i]];
     }
-    std::cout << "graphclass" << std::endl;
 
     // Construct the weighted dynamic graph.
     AllocPolicy::DynamicAllocatorT allocator;
@@ -107,12 +105,9 @@ void runSSSP(
         1.0f, // load factor
         0     // CUDA device
     );
-    std::cout << "graphclass done" << std::endl;
-    std::cout << "E: " << E << "V: " << V << std::endl;
 
     // The insertion kernel accesses these arrays on the GPU.
     int *d_src = nullptr, *d_dst = nullptr, *d_weights = nullptr;
-    std::cout << "1" << std::endl;
 
     checkCuda(cudaMalloc(&d_src, E * sizeof(int)));
     checkCuda(cudaMalloc(&d_dst, E * sizeof(int)));
@@ -125,7 +120,6 @@ void runSSSP(
     checkCuda(cudaMemcpy(d_weights, weights, E * sizeof(int),
                          cudaMemcpyHostToDevice));
 
-    std::cout << "2" << std::endl;
     graph.insertEdges(d_src, d_dst, d_weights, E);
     checkCuda(cudaDeviceSynchronize());
 
@@ -135,14 +129,12 @@ void runSSSP(
         // Handle invalid graph/source.
         return;
     }
-    std::cout << "3" << std::endl;
 
     int *d_current = nullptr;
     int *d_next = nullptr;
     int *d_prefix = nullptr;
     int *d_slabPrefix = nullptr;
     int *d_distance = nullptr;
-    std::cout << "4" << std::endl;
 
     checkCuda(cudaMalloc(&d_current, V * sizeof(int)));
     checkCuda(cudaMalloc(&d_next, V * sizeof(int)));
@@ -156,7 +148,6 @@ void runSSSP(
     checkCuda(cudaMemset(d_slabPrefix, 0, V * sizeof(int)));
 
     thrust::fill(thrust::device, d_distance, d_distance + V, INF);
-    std::cout << "5" << std::endl;
 
     const int zero = 0;
     checkCuda(cudaMemcpy(&d_current[0], &source, sizeof(int),
@@ -165,7 +156,6 @@ void runSSSP(
                          cudaMemcpyHostToDevice));
     // Run ONLY SSSP. Initial frontier contains the source.
     // One slab per warp.
-    std::cout << "SSSP" << std::endl;
 
     clock_t starttt = clock();
     SSSP<Graph, int, int>(
@@ -178,7 +168,6 @@ void runSSSP(
         1,
         8, V);
     clock_t enddd = clock();
-    std::cout << "SSSPdone " << std::endl;
 
     // checkCuda(cudaDeviceSynchronize());
 
@@ -223,7 +212,7 @@ void runSSSP(
     cout << "source             : " << source << endl;
     cout << "MAX Distance       : " << maxDist << endl;
     cout << "MAX Distance CPU   : " << maxDistCPU << endl;
-    cout << "Matched           : " << mismatch << endl;
+    cout << "misMatched         : " << mismatch << endl;
 
     printf("Time Taken (GPU)   : %f ms\n", (((double)enddd - (double)starttt) / CLOCKS_PER_SEC) * 1000);
 }
@@ -299,12 +288,15 @@ int main(int argc, char *argv[])
     std::vector<int> dst;
     std::vector<int> weights;
 
-    int source = 100;
+    int source = 2677;
     if (file_to_array(filepath, src, dst, weights, V, E))
     {
+        clock_t starttt = clock();
         std::vector<int> CPUdist = dijkstra(V, E, src, dst, weights, source);
-        std::cout<<"HI"<<std::endl ; 
+        clock_t enddd = clock();
+        printf("Time Taken (CPU)   : %f ms\n", (((double)enddd - (double)starttt) / CLOCKS_PER_SEC) * 1000);
         runSSSP(src.data(), dst.data(), weights.data(), V, E, source, CPUdist);
+
     }
 
     return 0;
