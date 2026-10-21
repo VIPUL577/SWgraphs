@@ -93,6 +93,7 @@ public:
         CHECK_CUDA_ERROR(cudaMalloc(&d_BucketsPrefixSum, sizeof(int) * N));
         CHECK_CUDA_ERROR(cudaMalloc(&d_vertexDegree, sizeof(int) * N));
         CHECK_CUDA_ERROR(cudaMalloc(&d_headptr, 32 * sizeof(uint32_t) * totalBuckets));
+        CHECK_CUDA_ERROR(cudaMemset(d_headptr, 0xFF, 128 * (size_t)totalBuckets));
 
         thrust::fill(thrust::device, d_firstUpdatedSlab, d_firstUpdatedSlab + totalBuckets, static_cast<uint32_t>(SlabInfoT::A_INDEX_POINTER));
         thrust::fill(thrust::device, d_firstUpdatedLaneId, d_firstUpdatedLaneId + totalBuckets, 0);
@@ -113,14 +114,14 @@ public:
         CHECK_CUDA_ERROR(cudaMalloc(&graphVertex, sizeof(edgeHashCxt) * N));
         CHECK_CUDA_ERROR(cudaMemcpy(graphVertex, tempVertexHost.data(), sizeof(edgeHashCxt) * N, cudaMemcpyHostToDevice));
         CHECK_CUDA_ERROR(cudaMemcpy(d_BucketsPrefixSum, h_BucketsPrefixSum, sizeof(int) * N, cudaMemcpyHostToDevice));
-        CHECK_CUDA_ERROR(cudaMemcpy(d_vertexDegree, h_vertexDegree, sizeof(int) * N, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemset(d_vertexDegree, 0, sizeof(int) * N));
         CHECK_CUDA_ERROR(cudaMemset(d_EdgesPerBucket, 0, sizeof(int) * totalBuckets));
         graphAlloc = *dynallocator.getContextPtr();
     }
     ~DynamicSlabGraph()
     {
-        delete h_BucketsPerVertex;
-        delete h_BucketsPrefixSum;
+        delete[] h_BucketsPerVertex;
+        delete[] h_BucketsPrefixSum;
         CHECK_CUDA_ERROR(cudaFree(d_firstUpdatedSlab));
         CHECK_CUDA_ERROR(cudaFree(d_firstUpdatedLaneId));
         CHECK_CUDA_ERROR(cudaFree(d_isSlablistUpdated));
@@ -209,6 +210,7 @@ public:
         CHECK_CUDA_ERROR(cudaMalloc(&d_BucketsPrefixSum, sizeof(int) * N));
         CHECK_CUDA_ERROR(cudaMalloc(&d_vertexDegree, sizeof(int) * N));
         CHECK_CUDA_ERROR(cudaMalloc(&d_headptr, 32 * sizeof(uint32_t) * totalBuckets));
+        CHECK_CUDA_ERROR(cudaMemset(d_headptr, 0xFF, 128 * (size_t)totalBuckets));
 
         thrust::fill(thrust::device, d_firstUpdatedSlab, d_firstUpdatedSlab + totalBuckets, static_cast<uint32_t>(SlabInfoT::A_INDEX_POINTER));
         thrust::fill(thrust::device, d_firstUpdatedLaneId, d_firstUpdatedLaneId + totalBuckets, 0);
@@ -231,14 +233,14 @@ public:
         CHECK_CUDA_ERROR(cudaMalloc(&graphVertex, sizeof(edgeHashCxt) * N));
         CHECK_CUDA_ERROR(cudaMemcpy(graphVertex, tempVertexHost.data(), sizeof(edgeHashCxt) * N, cudaMemcpyHostToDevice));
         CHECK_CUDA_ERROR(cudaMemcpy(d_BucketsPrefixSum, h_BucketsPrefixSum, sizeof(int) * N, cudaMemcpyHostToDevice));
-        CHECK_CUDA_ERROR(cudaMemcpy(d_vertexDegree, h_vertexDegree, sizeof(int) * N, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemset(d_vertexDegree, 0, sizeof(int) * N));
         CHECK_CUDA_ERROR(cudaMemset(d_EdgesPerBucket, 0, sizeof(int) * totalBuckets));
         graphAlloc = *dynallocator.getContextPtr();
     }
     ~DynamicSlabGraph()
     {
-        delete h_BucketsPerVertex;
-        delete h_BucketsPrefixSum;
+        delete[] h_BucketsPerVertex;
+        delete[] h_BucketsPrefixSum;
         CHECK_CUDA_ERROR(cudaFree(d_firstUpdatedSlab));
         CHECK_CUDA_ERROR(cudaFree(d_firstUpdatedLaneId));
         CHECK_CUDA_ERROR(cudaFree(d_isSlablistUpdated));

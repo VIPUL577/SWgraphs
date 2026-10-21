@@ -13,36 +13,44 @@ void exclusiveScanGPU(int *d_data, int N)
     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
 }
 template <typename edgeHashCxt, typename VertexT>
-__global__ void countSlabsKernel(edgeHashCxt *graphVertex, VertexT *currentFrontier, int *FrontierSlabs, int N)
+__global__ void countSlabsKernel(edgeHashCxt* graphVertex,VertexT* currentFrontier, int* FrontierSlabs,int N)
 {
-    int threadId = blockIdx.x * blockDim.x + threadIdx.x;
-    if (threadId < N)
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int lane = threadIdx.x & 31;
+    int frontierIdx = tid / 32;
+
+    if (frontierIdx >= N)
+        return;
+
+    auto node = currentFrontier[frontierIdx];
+
+    auto it = graphVertex[node].Begin();
+    auto end = graphVertex[node].End();
+
+    int n = 0;
+    while (it != end)
     {
-        int n = 0;
-        auto node = currentFrontier[threadId];
-        auto it = graphVertex[node].Begin();
-        auto end = graphVertex[node].End();
-        while (it != end)
-        {
-            n++;
-            it++;
-        }
-        FrontierSlabs[threadId] = n;
+        ++n;
+        ++it;
     }
+
+    if (lane == 0)
+        FrontierSlabs[frontierIdx] = n;
 }
 template <typename EdgesObj>
 void DynamicSlabGraph<EdgesObj, false>::countSlabs(DynamicSlabGraph<EdgesObj, false>::VertexT *currentFrontier, int *FrontierSlabs, int N)
 {
-    typename DynamicSlabGraph<EdgesObj, false>::edgeHashCxt *vertices = this->graphVertex;
-    int blocks = (N + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+    typename DynamicSlabGraph<EdgesObj, false>::edgeHashCxt *vertices = this->getVertexContexts();
+    int blocks = (N * 32 + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+
     countSlabsKernel<DynamicSlabGraph<EdgesObj, false>::edgeHashCxt, DynamicSlabGraph<EdgesObj, false>::VertexT><<<blocks, THREADSPERBLOCK>>>(vertices, currentFrontier, FrontierSlabs, N);
 }
 template <typename EdgesObj>
 void DynamicSlabGraph<EdgesObj, true>::countSlabs(DynamicSlabGraph<EdgesObj, true>::VertexT *currentFrontier, int *FrontierSlabs, int N)
 {
-    typename DynamicSlabGraph<EdgesObj, true>::edgeHashCxt *vertices = this->graphVertex;
-    int blocks = (N + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    countSlabsKernel<DynamicSlabGraph<EdgesObj, true>::edgeHashCxt, DynamicSlabGraph<EdgesObj, true>::VertexT><<<blocks, THREADSPERBLOCK>>>(vertices, currentFrontier, FrontierSlabs, N);
+    typename DynamicSlabGraph<EdgesObj, true>::edgeHashCxt *vertices = this->getVertexContexts();
+    int blocks = (N * 32 + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+    countSlabsKernel<DynamicSlabGraph<EdgesObj, true>::edgeHashCxt,DynamicSlabGraph<EdgesObj, true>::VertexT><<<blocks, THREADSPERBLOCK>>>(vertices, currentFrontier, FrontierSlabs, N);
 }
 
 #endif

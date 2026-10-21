@@ -40,7 +40,7 @@ __global__ void generate_frontier(VertexT *vkeep, VertexT *prefix_vkeep, int V, 
 }
 
 template <typename VertexT,typename EdgeValueT,typename edgeHashCtxt>
-__global__ void SSSPAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier,EdgeValueT *minDist, int *SlabPrefixSum, edgeHashCtxt * graph , int cf_n, int noThreads , int slabsperwarp )
+__global__ void SSSPAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier,EdgeValueT *minDist, int *SlabPrefixSum, edgeHashCtxt * graph , int cf_n, int noThreads , int slabsperwarp, int totalSlabs )
 { /*
     1) ADD MASK IF THE VERTEX IS VALID OR NOT, OR DELETED OR THE VERTEX HAS ZERO NEIGHBOURS(WHILE LOOP)
     2) TAKE CARE END POINTS 
@@ -56,11 +56,11 @@ __global__ void SSSPAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier,E
 
         int binaryStart = 0; 
         int binaryEnd = cf_n-1; 
-        if(lane == 0){
-            while(binaryEnd>binaryStart){
-                int mid = (binaryStart+binaryEnd)/2; 
-                if(SlabPrefixSum[mid] <= begin) binaryStart = mid ;
-                else binaryEnd = mid - 1;  
+        if (lane == 0) {
+            while (binaryEnd > binaryStart) {
+                int mid = (binaryStart + binaryEnd + 1) / 2;   // was (s+e)/2
+                if (SlabPrefixSum[mid] <= begin) binaryStart = mid;
+                else binaryEnd = mid - 1;
             }
         }
         binaryStart = __shfl_sync(0xFFFFFFFF , binaryStart , 0); 
@@ -69,19 +69,22 @@ __global__ void SSSPAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier,E
         auto startIt = graph[currentVertex].Begin();
         for(int i = 0 ; i < offset ; ++i , ++startIt);
         auto endIt = graph[currentVertex].End();
+        int stop = min(end, totalSlabs); 
         for(int i = begin ; i<end ; i++){ 
             auto tentativeV = *startIt.GetPointer(lane); 
             auto edgeWeight = __shfl_down_sync(0xffffffff,tentativeV,1); 
-            if(((1 << lane) & 0x15555555) && (tentativeV != EMPTY_KEY) &&(tentativeV != TOMBSTONE_KEY)&&(currentVertex != tentativeV)){
+            if(((1u << lane) & 0x15555555) && (tentativeV != EMPTY_KEY) &&(tentativeV != TOMBSTONE_KEY)&&(currentVertex != tentativeV)){
             EdgeValueT newDist = minDist[currentVertex] + edgeWeight ; 
             EdgeValueT old = atomicMin(&minDist[tentativeV],newDist); 
             if(newDist < old)
                 outgoingFrontier[tentativeV] = 1; 
             }
             startIt++ ; 
-            if(startIt == endIt){
-                binaryStart++ ; 
-                currentVertex = currentFrontier[binaryStart]; 
+            while (startIt == endIt && binaryStart + 1 < cf_n && i + 1 < stop)
+            {
+                binaryStart++;
+
+                currentVertex = currentFrontier[binaryStart];
                 startIt = graph[currentVertex].Begin();
                 endIt = graph[currentVertex].End();
             }
@@ -90,14 +93,14 @@ __global__ void SSSPAdvance(VertexT *currentFrontier,VertexT *outgoingFrontier,E
 }
 
 template<typename DynamicSlabGraph,typename VertexT, typename EdgeValueT>
-int SSSPAdvanceWrapper(DynamicSlabGraph graphClass,VertexT* currentFrontier,VertexT* outgoingFrontier,VertexT* prefixKeep, int* slabPrefixSum,EdgeValueT *minDist ,int cf_n, int slabsperwarp){
+int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass,VertexT* currentFrontier,VertexT* outgoingFrontier,VertexT* prefixKeep, int* slabPrefixSum,EdgeValueT *minDist ,int cf_n, int slabsperwarp, int V){
     graphClass.countSlabs(currentFrontier , slabPrefixSum , cf_n); 
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum,slabPrefixSum,cf_n); 
     int noOfThreads = 32*ceil((double)noOfSlabs/slabsperwarp); 
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp ); 
+    SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp,noOfSlabs ); 
     cf_n = getNumberSlabs<VertexT>(outgoingFrontier, prefixKeep , graphClass.getNumVertices()); 
-    grid = (cf_n + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+    grid = (V + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     generate_frontier<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, prefixKeep, graphClass.getNumVertices(), currentFrontier);
     initZero<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, graphClass.getNumVertices());
     cudaDeviceSynchronize();
@@ -105,10 +108,9 @@ int SSSPAdvanceWrapper(DynamicSlabGraph graphClass,VertexT* currentFrontier,Vert
     
 }
 template<typename DynamicSlabGraph,typename VertexT, typename EdgeValueT>
-void SSSP(DynamicSlabGraph graphClass,VertexT* currentFrontier,VertexT* outgoingFrontier,VertexT* prefixKeep, int* slabPrefixSum,EdgeValueT *minDist ,int cf_n, int slabsperwarp){
+void SSSP(DynamicSlabGraph &graphClass,VertexT* currentFrontier,VertexT* outgoingFrontier,VertexT* prefixKeep, int* slabPrefixSum,EdgeValueT *minDist ,int cf_n, int slabsperwarp,int V){
     while (cf_n>0)
     {
-        std::cout<<cf_n<<std::endl; 
-        cf_n = SSSPAdvanceWrapper<DynamicSlabGraph,VertexT,EdgeValueT>(graphClass,currentFrontier,outgoingFrontier,prefixKeep,slabPrefixSum,minDist,cf_n,slabsperwarp); 
+        cf_n = SSSPAdvanceWrapper<DynamicSlabGraph,VertexT,EdgeValueT>(graphClass,currentFrontier,outgoingFrontier,prefixKeep,slabPrefixSum,minDist,cf_n,slabsperwarp,V); 
     }
 }
