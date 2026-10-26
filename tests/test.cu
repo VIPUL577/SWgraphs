@@ -37,15 +37,13 @@ bool file_to_array(string filepath,
 
     while (std::getline(file, line))
     {
-        // Skip comments and blank lines.
         if (line.empty() || line[0] == '#')
             continue;
-
         std::istringstream iss(line);
 
         int u, v, w;
         if (!(iss >> u >> v >> w))
-            continue; // Skip headers or invalid lines.
+            continue; 
 
         src.push_back(u);
         dst.push_back(v);
@@ -67,8 +65,6 @@ static void checkCuda(cudaError_t err)
     }
 }
 
-// src[i] -> dst[i], with edge weight weights[i].
-// The three input arrays remain CPU arrays.
 void runSSSP(
     const int *src,
     const int *dst,
@@ -95,7 +91,6 @@ void runSSSP(
         ++degree[src[i]];
     }
 
-    // Construct the weighted dynamic graph.
     AllocPolicy::DynamicAllocatorT allocator;
 
     Graph graph(
@@ -150,23 +145,13 @@ void runSSSP(
     thrust::fill(thrust::device, d_distance, d_distance + V, INF);
 
     const int zero = 0;
-    checkCuda(cudaMemcpy(&d_current[0], &source, sizeof(int),
-                         cudaMemcpyHostToDevice));
-    checkCuda(cudaMemcpy(d_distance + source, &zero, sizeof(int),
-                         cudaMemcpyHostToDevice));
+    checkCuda(cudaMemcpy(&d_current[0], &source, sizeof(int),cudaMemcpyHostToDevice));
+    checkCuda(cudaMemcpy(d_distance + source, &zero, sizeof(int),cudaMemcpyHostToDevice));
     // Run ONLY SSSP. Initial frontier contains the source.
     // One slab per warp.
 
     clock_t starttt = clock();
-    SSSP<Graph, int, int>(
-        graph,
-        d_current,
-        d_next,
-        d_prefix,
-        d_slabPrefix,
-        d_distance,
-        1,
-        8, V);
+    SSSP<Graph, int, int>(graph,d_current,d_next,d_prefix,d_slabPrefix,d_distance,1,16, V);
     clock_t enddd = clock();
 
     // checkCuda(cudaDeviceSynchronize());
@@ -206,7 +191,7 @@ void runSSSP(
 
         }
     }
-    cout << "#########SSSP GUNROCK########" << endl;
+    cout << "#########DYNAMIC SSSP WITH SLABHASH########" << endl;
     cout << "vertices           : " << V << '\n';
     cout << "edges              : " << E << '\n';
     cout << "source             : " << source << endl;

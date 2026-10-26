@@ -5,6 +5,8 @@
 #include <bits/stdc++.h>
 #include "slab_hash.cuh"
 #include <thrust/execution_policy.h>
+#include <thrust/device_ptr.h>
+#include <thrust/extrema.h>
 #include <thrust/scan.h>
 #define THREADSPERBLOCK 512
 
