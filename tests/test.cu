@@ -129,10 +129,14 @@ void runSSSP(
     int *d_next = nullptr;
     int *d_prefix = nullptr;
     int *d_slabPrefix = nullptr;
+    int *d_parent = nullptr;
+
     int *d_distance = nullptr;
 
     checkCuda(cudaMalloc(&d_current, V * sizeof(int)));
     checkCuda(cudaMalloc(&d_next, V * sizeof(int)));
+    checkCuda(cudaMalloc(&d_parent, V * sizeof(int)));
+
     checkCuda(cudaMalloc(&d_prefix, V * sizeof(int)));
     checkCuda(cudaMalloc(&d_slabPrefix, V * sizeof(int)));
     checkCuda(cudaMalloc(&d_distance, V * sizeof(int)));
@@ -141,27 +145,28 @@ void runSSSP(
     checkCuda(cudaMemset(d_next, 0, V * sizeof(int)));
     checkCuda(cudaMemset(d_prefix, 0, V * sizeof(int)));
     checkCuda(cudaMemset(d_slabPrefix, 0, V * sizeof(int)));
+    checkCuda(cudaMemset(d_parent, 0, V * sizeof(int)));
+
 
     thrust::fill(thrust::device, d_distance, d_distance + V, INF);
 
     const int zero = 0;
+    const int minus = -1; 
     checkCuda(cudaMemcpy(&d_current[0], &source, sizeof(int),cudaMemcpyHostToDevice));
     checkCuda(cudaMemcpy(d_distance + source, &zero, sizeof(int),cudaMemcpyHostToDevice));
+    checkCuda(cudaMemcpy(d_parent + source, &minus, sizeof(int),cudaMemcpyHostToDevice));
+
     // Run ONLY SSSP. Initial frontier contains the source.
     // One slab per warp.
 
     clock_t starttt = clock();
-    SSSP<Graph, int, int>(graph,d_current,d_next,d_prefix,d_slabPrefix,d_distance,1,16, V);
+    SSSP<Graph, int, int>(graph,d_current,d_parent,d_next,d_prefix,d_slabPrefix,d_distance,1,16);
     clock_t enddd = clock();
 
     // checkCuda(cudaDeviceSynchronize());
 
     std::vector<int> distance(V);
-    checkCuda(cudaMemcpy(
-        distance.data(),
-        d_distance,
-        V * sizeof(int),
-        cudaMemcpyDeviceToHost));
+    checkCuda(cudaMemcpy(distance.data(),d_distance,V * sizeof(int),cudaMemcpyDeviceToHost));
 
     cudaFree(d_src);
     cudaFree(d_dst);

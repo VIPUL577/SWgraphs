@@ -48,7 +48,7 @@ __global__ void printKernel(VertexT *currentFrontier, int N)
     }
 }
 template <typename VertexT, typename EdgeValueT, typename edgeHashCtxt>
-__global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier, EdgeValueT *minDist, int *SlabPrefixSum, edgeHashCtxt *graph, int cf_n, int noThreads, int slabsperwarp, int totalSlabs)
+__global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,VertexT *parent, EdgeValueT *minDist, int *SlabPrefixSum, edgeHashCtxt *graph, int cf_n, int noThreads, int slabsperwarp, int totalSlabs)
 { /*
     1) ADD MASK IF THE VERTEX IS VALID OR NOT, OR DELETED OR THE VERTEX HAS ZERO NEIGHBOURS(WHILE LOOP)
     2) TAKE CARE END POINTS
@@ -92,8 +92,10 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
             {
                 EdgeValueT newDist = minDist[currentVertex] + edgeWeight;
                 EdgeValueT old = atomicMin(&minDist[tentativeV], newDist);
-                if (newDist < old)
+                if (newDist < old){
                     outgoingFrontier[tentativeV] = 1;
+                    parent[tentativeV] = currentVertex; 
+                }
             }
             startIt++;
             while (startIt == endIt && binaryStart + 1 < cf_n && i + 1 < stop)
@@ -107,9 +109,17 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
         }
     }
 }
+template<typename p>
+int generateFrontierWrapper(p* currentFrontier, p* bitmask, p* prefixKeep, int N){
+    int cf_n = getNumberSlabs<p>(bitmask, prefixKeep, N);
+    int grid = (N + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+    generate_frontier<p><<<grid, THREADSPERBLOCK>>>(bitmask, prefixKeep, N, currentFrontier);
+    initZero<p><<<grid, THREADSPERBLOCK>>>(bitmask, N);
 
+    return cf_n; 
+}
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
-int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, EdgeValueT *minDist, int cf_n, int slabsperwarp, int V)
+int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier,VertexT *parent, VertexT *prefixKeep, int *slabPrefixSum, EdgeValueT *minDist, int cf_n, int slabsperwarp)
 {
     graphClass.countSlabs(currentFrontier, slabPrefixSum, cf_n);
     //<DEBUG>
@@ -124,19 +134,14 @@ int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, V
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, cf_n);
     int noOfThreads = 32 * ceil((double)noOfSlabs / slabsperwarp);
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp, noOfSlabs);
-    cf_n = getNumberSlabs<VertexT>(outgoingFrontier, prefixKeep, graphClass.getNumVertices());
-    grid = (V + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    generate_frontier<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, prefixKeep, graphClass.getNumVertices(), currentFrontier);
-    initZero<VertexT><<<grid, THREADSPERBLOCK>>>(outgoingFrontier, graphClass.getNumVertices());
-    cudaDeviceSynchronize();
-    return cf_n;
+    SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, parent,minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp, noOfSlabs);
+    return generateFrontierWrapper<VertexT>(currentFrontier,outgoingFrontier,prefixKeep,graphClass.getNumVertices()); 
 }
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
-void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, EdgeValueT *minDist, int cf_n, int slabsperwarp, int V)
+void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier,VertexT *parent, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, EdgeValueT *minDist, int cf_n, int slabsperwarp)
 {
     while (cf_n > 0)
     {
-        cf_n = SSSPAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, cf_n, slabsperwarp, V);
+        cf_n = SSSPAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier,parent, prefixKeep,slabPrefixSum, minDist, cf_n, slabsperwarp);
     }
 }
