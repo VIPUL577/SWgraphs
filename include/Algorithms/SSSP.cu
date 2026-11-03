@@ -5,48 +5,10 @@
 #include <time.h>
 #include "Essentials/main/graph.cu"
 
-template <typename VertexT>
-int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N)
-{
-    if (N <= 0)
-        return 0;
-    int a1, a2;
-    cudaMemcpy(&a1, &prefix_sum_in[N - 1], sizeof(int), cudaMemcpyDeviceToHost);
-    thrust::exclusive_scan(thrust::device, prefix_sum_in, prefix_sum_in + N, prefix_sum_out);
-    cudaMemcpy(&a2, &prefix_sum_out[N - 1], sizeof(int), cudaMemcpyDeviceToHost);
-    return a1 + a2;
-}
-template <typename VertexT>
-__global__ void initZero(VertexT *array, int N)
-{
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < N)
-    {
-        array[tid] = 0;
-    }
-}
-template <typename VertexT>
-__global__ void generate_frontier(VertexT *vkeep, VertexT *prefix_vkeep, int V, VertexT *unvisited_frontier)
-{
-    // launch V
-    int idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (idx < V)
-    {
-        if (vkeep[idx])
-        {
-            unvisited_frontier[prefix_vkeep[idx]] = idx;
-        }
-    }
-}
-template <typename VertexT>
-__global__ void printKernel(VertexT *currentFrontier, int N)
-{
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < N)
-    {
-        printf("%d : %d \n", tid, currentFrontier[tid]);
-    }
-}
+
+//############################################################################################
+//                                       KERNELS
+//############################################################################################
 template <typename VertexT, typename EdgeValueT, typename edgeHashCtxt>
 __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,VertexT *parent, EdgeValueT *minDist, int *SlabPrefixSum, edgeHashCtxt *graph, int cf_n, int noThreads, int slabsperwarp, int totalSlabs)
 { /*
@@ -109,6 +71,54 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
         }
     }
 }
+//############################################################################################
+//                                  HELPER KERNELS
+//############################################################################################
+template <typename VertexT>
+__global__ void initZero(VertexT *array, int N)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < N)
+    {
+        array[tid] = 0;
+    }
+}
+template <typename VertexT>
+__global__ void generate_frontier(VertexT *vkeep, VertexT *prefix_vkeep, int V, VertexT *unvisited_frontier)
+{
+    // launch V
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < V)
+    {
+        if (vkeep[idx])
+        {
+            unvisited_frontier[prefix_vkeep[idx]] = idx;
+        }
+    }
+}
+template <typename VertexT>
+__global__ void printKernel(VertexT *currentFrontier, int N)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < N)
+    {
+        printf("%d : %d \n", tid, currentFrontier[tid]);
+    }
+}
+//############################################################################################
+//                                  HELPER FUNCTIONS
+//############################################################################################
+template <typename VertexT>
+int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N)
+{
+    if (N <= 0)
+        return 0;
+    int a1, a2;
+    cudaMemcpy(&a1, &prefix_sum_in[N - 1], sizeof(int), cudaMemcpyDeviceToHost);
+    thrust::exclusive_scan(thrust::device, prefix_sum_in, prefix_sum_in + N, prefix_sum_out);
+    cudaMemcpy(&a2, &prefix_sum_out[N - 1], sizeof(int), cudaMemcpyDeviceToHost);
+    return a1 + a2;
+}
 template<typename p>
 int generateFrontierWrapper(p* currentFrontier, p* bitmask, p* prefixKeep, int N){
     int cf_n = getNumberSlabs<p>(bitmask, prefixKeep, N);
@@ -118,6 +128,9 @@ int generateFrontierWrapper(p* currentFrontier, p* bitmask, p* prefixKeep, int N
 
     return cf_n; 
 }
+//############################################################################################
+//                                  WRAPPER FUNCTIONS
+//############################################################################################
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier,VertexT *parent, VertexT *prefixKeep, int *slabPrefixSum, EdgeValueT *minDist, int cf_n, int slabsperwarp)
 {
@@ -137,6 +150,9 @@ int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, V
     SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, parent,minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp, noOfSlabs);
     return generateFrontierWrapper<VertexT>(currentFrontier,outgoingFrontier,prefixKeep,graphClass.getNumVertices()); 
 }
+//############################################################################################
+//                                  MAIN FUNCTIONS
+//############################################################################################
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier,VertexT *parent, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, EdgeValueT *minDist, int cf_n, int slabsperwarp)
 {
