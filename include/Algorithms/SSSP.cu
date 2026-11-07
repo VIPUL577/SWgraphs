@@ -6,7 +6,63 @@
 #include "Essentials/main/definations.cu"
 #include "Essentials/main/graph.cu"
 
+//############################################################################################
+//                                  HELPER KERNELS
+//############################################################################################
+template <typename VertexT>
+__global__ void initZero(VertexT *array, int N)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < N)
+    {
+        array[tid] = 0;
+    }
+}
+template <typename VertexT>
+__global__ void generate_frontier(VertexT *vkeep, VertexT *prefix_vkeep, int V, VertexT *unvisited_frontier)
+{
+    // launch V
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < V)
+    {
+        if (vkeep[idx])
+        {
+            unvisited_frontier[prefix_vkeep[idx]] = idx;
+        }
+    }
+}
+template <typename VertexT>
+__global__ void printKernel(VertexT *currentFrontier, int N)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < N)
+    {
+        printf("%d : %d \n", tid, currentFrontier[tid]);
+    }
+}
+//############################################################################################
+//                                  HELPER FUNCTIONS
+//############################################################################################
+template <typename VertexT>
+int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N)
+{
+    if (N <= 0)
+        return 0;
+    int a1, a2;
+    cudaMemcpy(&a1, &prefix_sum_in[N - 1], sizeof(int), cudaMemcpyDeviceToHost);
+    thrust::exclusive_scan(thrust::device, prefix_sum_in, prefix_sum_in + N, prefix_sum_out);
+    cudaMemcpy(&a2, &prefix_sum_out[N - 1], sizeof(int), cudaMemcpyDeviceToHost);
+    return a1 + a2;
+}
+template<typename p>
+int generateFrontierWrapper(p* currentFrontier, p* bitmask, p* prefixKeep, int N){
+    int cf_n = getNumberSlabs<p>(bitmask, prefixKeep, N);
+    int grid = (N + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+    generate_frontier<p><<<grid, THREADSPERBLOCK>>>(bitmask, prefixKeep, N, currentFrontier);
+    initZero<p><<<grid, THREADSPERBLOCK>>>(bitmask, N);
 
+    return cf_n; 
+}
 //############################################################################################
 //                                       KERNELS
 //############################################################################################
@@ -72,62 +128,42 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
     }
 }
 //############################################################################################
-//                                  HELPER KERNELS
+//                               GENERATING CHILD CSR
 //############################################################################################
 template <typename VertexT>
-__global__ void initZero(VertexT *array, int N)
-{
+__global__ void countChild(distanceArray *minDist, int * count, int V){
+    //launch V
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < N)
-    {
-        array[tid] = 0;
+    if(tid<V){
+        auto parent = getParent(minDist[tid]); 
+        if(parent == -1) return; 
+        atomicAdd(&count[parent], 1); 
     }
 }
 template <typename VertexT>
-__global__ void generate_frontier(VertexT *vkeep, VertexT *prefix_vkeep, int V, VertexT *unvisited_frontier)
-{
-    // launch V
-    int idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (idx < V)
-    {
-        if (vkeep[idx])
-        {
-            unvisited_frontier[prefix_vkeep[idx]] = idx;
-        }
-    }
-}
-template <typename VertexT>
-__global__ void printKernel(VertexT *currentFrontier, int N)
-{
+__global__ void populateChild(VertexT * child, int * childOfft, int* cursor, distanceArray *minDist,int V){
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < N)
-    {
-        printf("%d : %d \n", tid, currentFrontier[tid]);
+    if(tid<V){
+        auto parent = getParent(minDist[tid]); 
+        child[atomicAdd(&cursor[parent],1)] = static_cast<VertexT>(tid); 
     }
 }
-//############################################################################################
-//                                  HELPER FUNCTIONS
-//############################################################################################
 template <typename VertexT>
-int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N)
-{
-    if (N <= 0)
-        return 0;
-    int a1, a2;
-    cudaMemcpy(&a1, &prefix_sum_in[N - 1], sizeof(int), cudaMemcpyDeviceToHost);
-    thrust::exclusive_scan(thrust::device, prefix_sum_in, prefix_sum_in + N, prefix_sum_out);
-    cudaMemcpy(&a2, &prefix_sum_out[N - 1], sizeof(int), cudaMemcpyDeviceToHost);
-    return a1 + a2;
+void generateChildCSR(VertexT* child, int* childOfft, int* vkeep, distanceArray *minDist,int V){
+    
+    int grid = (V+THREADSPERBLOCK-1)/THREADSPERBLOCK; 
+    initZero<int><<<grid, THREADSPERBLOCK>>>(childOfft, V);
+    countChild<VertexT><<<grid,THREADSPERBLOCK>>>(minDist,childOfft,V); 
+    int numberChildern = getNumberSlabs<VertexT>(childOfft,childOfft,V); 
+    thrust::copy(thrust::device,childOfft,childOfft + V,vkeep);
+    populateChild<VertexT><<<grid,THREADSPERBLOCK>>>(child,childOfft,vkeep,minDist,V); 
+    std::cout<<"DONE"<<std::endl;
 }
-template<typename p>
-int generateFrontierWrapper(p* currentFrontier, p* bitmask, p* prefixKeep, int N){
-    int cf_n = getNumberSlabs<p>(bitmask, prefixKeep, N);
-    int grid = (N + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    generate_frontier<p><<<grid, THREADSPERBLOCK>>>(bitmask, prefixKeep, N, currentFrontier);
-    initZero<p><<<grid, THREADSPERBLOCK>>>(bitmask, N);
+//############################################################################################
+//                          GENERATING FRONTIER DECREMENTAL
+//############################################################################################
 
-    return cf_n; 
-}
+
 //############################################################################################
 //                                  WRAPPER FUNCTIONS
 //############################################################################################
@@ -154,10 +190,13 @@ int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, V
 //                                  MAIN FUNCTIONS
 //############################################################################################
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
-void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int cf_n, int slabsperwarp)
+void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int cf_n, int slabsperwarp, int V)
 {
     while (cf_n > 0)
     {
         cf_n = SSSPAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep,slabPrefixSum, minDist, cf_n, slabsperwarp);
     }
+    std::cout<<"DONE"<<std::endl;
+
+    generateChildCSR(outgoingFrontier,prefixKeep,slabPrefixSum,minDist,V);
 }

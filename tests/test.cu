@@ -14,7 +14,7 @@
 
 using namespace std;
 
-long long int INF = LLONG_MAX;
+long long int INF = getWord(INT_MAX,-1);
 using AllocPolicy = FullAllocatorPolicy<8, 32, 1>;
 using WeightedObj = WeightedEdgesObj<AllocPolicy>;
 using Graph = DynamicSlabGraph<WeightedObj, true>;
@@ -160,12 +160,12 @@ void runSSSP(
     thrust::fill(thrust::device, d_distance, d_distance + V, INF);
     // cout<<"[DEBUG] 5"<<endl; 
 
-    distanceArray zero = 0;
+    distanceArray zero = getWord(0,-1);
     checkCuda(cudaMemcpy(&d_current[0], &source, sizeof(int),cudaMemcpyHostToDevice));
     checkCuda(cudaMemcpy(d_distance + source, &zero, sizeof(distanceArray),cudaMemcpyHostToDevice));
 
     clock_t starttt = clock();
-    SSSP<Graph, int, int>(graph,d_current,d_next,d_prefix,d_slabPrefix,d_distance,1,16);
+    SSSP<Graph, int, int>(graph,d_current,d_next,d_prefix,d_slabPrefix,d_distance,1,16,V);
     clock_t enddd = clock();
     // cout<<"[DEBUG] 6"<<endl; 
 
@@ -223,13 +223,15 @@ void runSSSP(
     printf("Time Taken (GPU)   : %f ms\n", (((double)enddd - (double)starttt) / CLOCKS_PER_SEC) * 1000);
 }
 
-std::vector<int> dijkstra(
+void dijkstra(
     int V,
     int E,
     const std::vector<int> &src,
     const std::vector<int> &dst,
     const std::vector<int> &weights,
     std::vector<int> &parent,
+    std::vector<int> &dist,
+
     int source)
 {
     std::vector<std::vector<std::pair<int, int>>> adj(V);
@@ -237,7 +239,7 @@ std::vector<int> dijkstra(
     for (int i = 0; i < E; i++)
         adj[src[i]].push_back({dst[i], weights[i]});
 
-    std::vector<int> dist(V, INT_MAX);
+    // std::vector<int> dist(V, INT_MAX);
     parent.assign(V, -1);
 
     dist[source] = 0;
@@ -285,7 +287,7 @@ std::vector<int> dijkstra(
         }
     }
 
-    return dist;
+
 }
 
 int main(int argc, char *argv[])
@@ -306,11 +308,14 @@ int main(int argc, char *argv[])
     if (file_to_array(filepath, src, dst, weights, V, E))
     {
         std::vector<int> parent(V, -1);
+        std::vector<int> CPUdist(V, INT_MAX);
+
         clock_t starttt = clock();
-        std::vector<int> CPUdist = dijkstra(V, E, src, dst, weights, parent,source);
+        // dijkstra(V, E, src, dst, weights, parent,CPUdist,source);
         clock_t enddd = clock();
         printf("Time Taken (CPU)   : %f ms\n", (((double)enddd - (double)starttt) / CLOCKS_PER_SEC) * 1000);
         runSSSP(src.data(), dst.data(), weights.data(), V, E, source, CPUdist,parent);
+        cudaDeviceSynchronize(); 
 
     }
 
