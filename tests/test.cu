@@ -14,7 +14,7 @@
 
 using namespace std;
 
-int INF = INT_MAX;
+long long int INF = LLONG_MAX;
 using AllocPolicy = FullAllocatorPolicy<8, 32, 1>;
 using WeightedObj = WeightedEdgesObj<AllocPolicy>;
 using Graph = DynamicSlabGraph<WeightedObj, true>;
@@ -64,7 +64,12 @@ static void checkCuda(cudaError_t err)
         std::exit(EXIT_FAILURE);
     }
 }
-
+void getFirst32Bits(distanceArray* arr, std::vector<int> &parent,std::vector<int> &result,int n) {
+    for (int i = 0; i < n; i++) {
+        result[i] = getDistance(arr[i]); 
+        parent[i] = getParent(arr[i]); 
+    }
+}
 void runSSSP(
     const int *src,
     const int *dst,
@@ -72,7 +77,8 @@ void runSSSP(
     int V,
     int E,
     int source,
-    std::vector<int> &CPUdistance)
+    std::vector<int> &CPUdistance,
+    std::vector<int> &CPUparent)
 {
     if (V <= 0 || E < 0 || source < 0 || source >= V)
         throw std::invalid_argument("Invalid graph dimensions/source");
@@ -103,7 +109,7 @@ void runSSSP(
 
     // The insertion kernel accesses these arrays on the GPU.
     int *d_src = nullptr, *d_dst = nullptr, *d_weights = nullptr;
-
+    // cout<<"[DEBUG] 1"<<endl; 
     checkCuda(cudaMalloc(&d_src, E * sizeof(int)));
     checkCuda(cudaMalloc(&d_dst, E * sizeof(int)));
     checkCuda(cudaMalloc(&d_weights, E * sizeof(int)));
@@ -114,9 +120,11 @@ void runSSSP(
                          cudaMemcpyHostToDevice));
     checkCuda(cudaMemcpy(d_weights, weights, E * sizeof(int),
                          cudaMemcpyHostToDevice));
+    // cout<<"[DEBUG] 2"<<endl; 
 
     graph.insertEdges(d_src, d_dst, d_weights, E);
     checkCuda(cudaDeviceSynchronize());
+    // cout<<"[DEBUG] 3"<<endl; 
 
     // Validate before allocating vertex arrays.
     if (V <= 0 || source < 0 || source >= V)
@@ -131,7 +139,8 @@ void runSSSP(
     int *d_slabPrefix = nullptr;
     // int *d_parent = nullptr;
 
-    int *d_distance = nullptr;
+    distanceArray *d_distance = nullptr;
+    // cout<<"[DEBUG] 4"<<endl; 
 
     checkCuda(cudaMalloc(&d_current, V * sizeof(int)));
     checkCuda(cudaMalloc(&d_next, V * sizeof(int)));
@@ -139,7 +148,7 @@ void runSSSP(
 
     checkCuda(cudaMalloc(&d_prefix, V * sizeof(int)));
     checkCuda(cudaMalloc(&d_slabPrefix, V * sizeof(int)));
-    checkCuda(cudaMalloc(&d_distance, V * sizeof(int)));
+    checkCuda(cudaMalloc(&d_distance, V * sizeof(distanceArray)));
 
     checkCuda(cudaMemset(d_current, 0, V * sizeof(int)));
     checkCuda(cudaMemset(d_next, 0, V * sizeof(int)));
@@ -149,24 +158,27 @@ void runSSSP(
 
 
     thrust::fill(thrust::device, d_distance, d_distance + V, INF);
+    // cout<<"[DEBUG] 5"<<endl; 
 
-    const int zero = 0;
-    const int minus = -1; 
+    distanceArray zero = 0;
     checkCuda(cudaMemcpy(&d_current[0], &source, sizeof(int),cudaMemcpyHostToDevice));
-    checkCuda(cudaMemcpy(d_distance + source, &zero, sizeof(int),cudaMemcpyHostToDevice));
-    // checkCuda(cudaMemcpy(d_parent + source, &minus, sizeof(int),cudaMemcpyHostToDevice));
-
-    // Run ONLY SSSP. Initial frontier contains the source.
-    // One slab per warp.
+    checkCuda(cudaMemcpy(d_distance + source, &zero, sizeof(distanceArray),cudaMemcpyHostToDevice));
 
     clock_t starttt = clock();
     SSSP<Graph, int, int>(graph,d_current,d_next,d_prefix,d_slabPrefix,d_distance,1,16);
     clock_t enddd = clock();
+    // cout<<"[DEBUG] 6"<<endl; 
 
     // checkCuda(cudaDeviceSynchronize());
+    std::vector<distanceArray> arr(V);
+    std::vector<int> distance(V,0);
+    std::vector<int> parent(V,-1);
 
-    std::vector<int> distance(V);
-    checkCuda(cudaMemcpy(distance.data(),d_distance,V * sizeof(int),cudaMemcpyDeviceToHost));
+    checkCuda(cudaMemcpy(arr.data(),d_distance,V * sizeof(distanceArray),cudaMemcpyDeviceToHost));
+    // cout<<"[DEBUG] 7"<<endl; 
+
+    getFirst32Bits(arr.data(),parent,distance,V); 
+    // cout<<"[DEBUG] 8"<<endl; 
 
     cudaFree(d_src);
     cudaFree(d_dst);
@@ -181,20 +193,22 @@ void runSSSP(
     int maxDistCPU = 0;
 
     int mismatch = 0;
+    int parentmismatch = 0 ; 
     for (int v = 0; v < V; ++v)
     {
-        if (distance[v] != INF)
+        if (distance[v] != INT_MAX)
         {
             maxDist = max(maxDist, distance[v]);
         }
         if (CPUdistance[v] != INT_MAX)
             maxDistCPU = max(maxDistCPU, CPUdistance[v]);
 
-        if (CPUdistance[v] != INT_MAX && distance[v] != INF && distance[v] != CPUdistance[v]){
+        if (CPUdistance[v] != INT_MAX && distance[v] != INT_MAX && distance[v] != CPUdistance[v])
             mismatch++;
-            cout<<"GPU : "<<distance[v]<<" CPU : "<<CPUdistance[v]<<endl;
-
-        }
+            // cout<<"GPU : "<<distance[v]<<" CPU : "<<CPUdistance[v]<<endl;
+        if (v!=source && CPUdistance[v] != INT_MAX && distance[v] != INT_MAX && parent[v] != CPUparent[v])
+            parentmismatch++;
+        
     }
     cout << "#########DYNAMIC SSSP WITH SLABHASH########" << endl;
     cout << "vertices           : " << V << '\n';
@@ -203,6 +217,8 @@ void runSSSP(
     cout << "MAX Distance       : " << maxDist << endl;
     cout << "MAX Distance CPU   : " << maxDistCPU << endl;
     cout << "misMatched         : " << mismatch << endl;
+    cout << "Parnet misMatched  : " << parentmismatch << endl;
+
 
     printf("Time Taken (GPU)   : %f ms\n", (((double)enddd - (double)starttt) / CLOCKS_PER_SEC) * 1000);
 }
@@ -213,53 +229,61 @@ std::vector<int> dijkstra(
     const std::vector<int> &src,
     const std::vector<int> &dst,
     const std::vector<int> &weights,
+    std::vector<int> &parent,
     int source)
 {
-    // Build adjacency list: adj[u] = { {v, weight}, ... }
     std::vector<std::vector<std::pair<int, int>>> adj(V);
 
     for (int i = 0; i < E; i++)
-    {
         adj[src[i]].push_back({dst[i], weights[i]});
-    }
 
-    // Initialize distances
     std::vector<int> dist(V, INT_MAX);
+    parent.assign(V, -1);
+
     dist[source] = 0;
 
-    // Min-heap: {distance, vertex}
     std::priority_queue<
         std::pair<int, int>,
         std::vector<std::pair<int, int>>,
-        std::greater<std::pair<int, int>>>
-        pq;
+        std::greater<std::pair<int, int>>> pq;
 
     pq.push({0, source});
 
-
-while (!pq.empty())
-{
-    int d = pq.top().first;
-    int u = pq.top().second;
-    pq.pop();  // CRITICAL: remove the top element
-
-    // Skip outdated entries
-    if (d != dist[u])
-        continue;
-
-    for (const auto &edge : adj[u])
+    while (!pq.empty())
     {
-        int v = edge.first;
-        int w = edge.second;
+        int d = pq.top().first;
+        int u = pq.top().second;
+        pq.pop();
 
-        if (d + w < dist[v])
+        if (d != dist[u])
+            continue;
+
+        for (const auto &edge : adj[u])
         {
-            dist[v] = d + w;
-            pq.push({dist[v], v});
+            int v = edge.first;
+            int w = edge.second;
+
+            long long candidate = static_cast<long long>(d) + w;
+
+            if (candidate > INT_MAX - 1)
+                continue;
+
+            int newDist = static_cast<int>(candidate);
+
+            if (newDist < dist[v])
+            {
+                dist[v] = newDist;
+                parent[v] = u;
+                pq.push({newDist, v});
+            }
+            else if (newDist == dist[v] &&
+                     v != source &&
+                     (parent[v] == -1 || u < parent[v]))
+            {
+                parent[v] = u;
+            }
         }
     }
-}
-
 
     return dist;
 }
@@ -277,15 +301,16 @@ int main(int argc, char *argv[])
     std::vector<int> src;
     std::vector<int> dst;
     std::vector<int> weights;
-
+    
     int source = 2677;
     if (file_to_array(filepath, src, dst, weights, V, E))
     {
+        std::vector<int> parent(V, -1);
         clock_t starttt = clock();
-        std::vector<int> CPUdist = dijkstra(V, E, src, dst, weights, source);
+        std::vector<int> CPUdist = dijkstra(V, E, src, dst, weights, parent,source);
         clock_t enddd = clock();
         printf("Time Taken (CPU)   : %f ms\n", (((double)enddd - (double)starttt) / CLOCKS_PER_SEC) * 1000);
-        runSSSP(src.data(), dst.data(), weights.data(), V, E, source, CPUdist);
+        runSSSP(src.data(), dst.data(), weights.data(), V, E, source, CPUdist,parent);
 
     }
 

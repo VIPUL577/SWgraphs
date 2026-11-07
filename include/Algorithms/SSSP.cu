@@ -3,6 +3,7 @@
 #include <cuda.h>
 #include <math.h>
 #include <time.h>
+#include "Essentials/main/definations.cu"
 #include "Essentials/main/graph.cu"
 
 
@@ -10,7 +11,7 @@
 //                                       KERNELS
 //############################################################################################
 template <typename VertexT, typename EdgeValueT, typename edgeHashCtxt>
-__global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier, EdgeValueT *minDist, int *SlabPrefixSum, edgeHashCtxt *graph, int cf_n, int noThreads, int slabsperwarp, int totalSlabs)
+__global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier, distanceArray *minDist, int *SlabPrefixSum, edgeHashCtxt *graph, int cf_n, int noThreads, int slabsperwarp, int totalSlabs)
 { /*
     1) ADD MASK IF THE VERTEX IS VALID OR NOT, OR DELETED OR THE VERTEX HAS ZERO NEIGHBOURS(WHILE LOOP)
     2) TAKE CARE END POINTS
@@ -42,8 +43,7 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
         auto currentVertex = currentFrontier[binaryStart];
         int offset = begin - SlabPrefixSum[binaryStart];
         auto startIt = graph[currentVertex].Begin();
-        for (int i = 0; i < offset; ++i, ++startIt)
-            ;
+        for (int i = 0; i < offset; ++i, ++startIt);
         auto endIt = graph[currentVertex].End();
         int stop = min(end, totalSlabs);
         for (int i = begin; i < stop; i++)
@@ -52,9 +52,10 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
             EdgeValueT edgeWeight = __shfl_down_sync(0xffffffff, tentativeV, 1);
             if (((1u << lane) & 0x15555555) && (tentativeV != EMPTY_KEY) && (tentativeV != TOMBSTONE_KEY) && (currentVertex != tentativeV))
             {
-                EdgeValueT newDist = minDist[currentVertex] + edgeWeight;
-                EdgeValueT old = atomicMin(&minDist[tentativeV], newDist);
-                if (newDist < old){
+                EdgeValueT newDist = getDistance(minDist[currentVertex]) + edgeWeight;
+                distanceArray newPD = getWord(newDist,currentVertex);
+                distanceArray old = atomicMin(&minDist[tentativeV], newPD);
+                if (newPD < old){
                     outgoingFrontier[tentativeV] = 1;
                 }
             }
@@ -131,7 +132,7 @@ int generateFrontierWrapper(p* currentFrontier, p* bitmask, p* prefixKeep, int N
 //                                  WRAPPER FUNCTIONS
 //############################################################################################
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
-int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, EdgeValueT *minDist, int cf_n, int slabsperwarp)
+int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int cf_n, int slabsperwarp)
 {
     graphClass.countSlabs(currentFrontier, slabPrefixSum, cf_n);
     //<DEBUG>
@@ -153,7 +154,7 @@ int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, V
 //                                  MAIN FUNCTIONS
 //############################################################################################
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
-void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, EdgeValueT *minDist, int cf_n, int slabsperwarp)
+void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int cf_n, int slabsperwarp)
 {
     while (cf_n > 0)
     {
