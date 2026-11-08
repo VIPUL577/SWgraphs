@@ -269,12 +269,12 @@ int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, V
     // std::cout <<"cf_n: "<<cf_n<<" Avg: "<<(noOfSlabs / cf_n) << " Max: "<< maxVal<<" Min: "<<minVal<< std::endl; // DEBUG
     //</DEBUG>
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, cf_n);
-    std::cout << "[DEBUG] 2" << std::endl;
+    // std::cout << "[DEBUG] 2" << std::endl;
 
     int noOfThreads = 32 * ceil((double)noOfSlabs / slabsperwarp);
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp, noOfSlabs);
-    std::cout << "[DEBUG] 2" << std::endl;
+    // std::cout << "[DEBUG] 2" << std::endl;
     
     return generateFrontierWrapper<VertexT>(currentFrontier, outgoingFrontier, prefixKeep, graphClass.getNumVertices());
 }
@@ -297,25 +297,13 @@ template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 void DecrementalSSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *src, VertexT *dst, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, VertexT *child, int *childOfft, int cf_n, int slabsperwarp)
 {
     int Etree = generateChildCSR(child, childOfft, slabPrefixSum, minDist, graphClass.getNumVertices());
-    std::cout << "[DEBUG] 1" << std::endl;
-
-    
     int grid = (cf_n + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     invalidateKernel<VertexT><<<grid, THREADSPERBLOCK>>>(src, dst, outgoingFrontier, minDist, cf_n);
-    std::cout << "[DEBUG] 1" << std::endl;
-    
     int numInvalid = generateFrontierWrapper<VertexT>(currentFrontier, outgoingFrontier, prefixKeep, graphClass.getNumVertices());
-    
     BFSgunrockChild(currentFrontier, outgoingFrontier, minDist, child, childOfft, slabPrefixSum, prefixKeep, numInvalid, graphClass.getNumVertices(), Etree);
-    std::cout << "[DEBUG] 1" << std::endl;
-    
     int cf_n2 = SSSPInvalidationAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, slabsperwarp);
-    std::cout << "[DEBUG] 1" << std::endl;
     graphClass.deleteEdges(src, dst, cf_n);
-    std::cout << "[DEBUG] 1" << std::endl;
-    
     SSSP<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, cf_n2, slabsperwarp);
-    std::cout << "[DEBUG] 1" << std::endl;
 }
 
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>

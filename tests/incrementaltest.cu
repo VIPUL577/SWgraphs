@@ -118,9 +118,17 @@ void dijkstra(
 
 int main(int argc, char **argv)
 {
-    if (argc != 2)
+    if (argc != 3)
     {
-        cerr << "Usage: " << argv[0] << " <input.txt>\n";
+        cerr << "Usage: " << argv[0] << " <input.txt> <percentage>\n";
+        return 1;
+    }
+
+    int percentage = stoi(argv[2]);
+
+    if (percentage < 0 || percentage > 100)
+    {
+        cerr << "Percentage must be between 0 and 100\n";
         return 1;
     }
 
@@ -153,7 +161,7 @@ int main(int argc, char **argv)
     }
 
     // Insert the first 90%, then the remaining 10%.
-    const int initialE = static_cast<int>((static_cast<long long>(E) * 90) / 100);
+    const int initialE = static_cast<int>((static_cast<long long>(E) * (100-(float)percentage)) / 100);
     const int insertedE = E - initialE;
 
     cout << "Vertices             : " << V << endl;

@@ -83,7 +83,8 @@ void dijkstra(
     priority_queue<
         pair<int, int>,
         vector<pair<int, int>>,
-        greater<pair<int, int>>> pq;
+        greater<pair<int, int>>>
+        pq;
 
     pq.push(make_pair(0, source));
 
@@ -117,9 +118,17 @@ void dijkstra(
 
 int main(int argc, char **argv)
 {
-    if (argc != 2)
+    if (argc != 3)
     {
-        cerr << "Usage: " << argv[0] << " <input.txt>\n";
+        cerr << "Usage: " << argv[0] << " <input.txt> <percentage>\n";
+        return 1;
+    }
+
+    int percentage = stoi(argv[2]);
+
+    if (percentage < 0 || percentage > 100)
+    {
+        cerr << "Percentage must be between 0 and 100\n";
         return 1;
     }
 
@@ -152,7 +161,7 @@ int main(int argc, char **argv)
     }
 
     // Delete the first 10% of edges.
-    const int deletedE = E / 10;
+    const int deletedE = E *((float)percentage/100);
     const int remainingE = E - deletedE;
 
     vector<int> remainingSrc(src.begin() + deletedE, src.end());

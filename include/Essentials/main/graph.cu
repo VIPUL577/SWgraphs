@@ -140,7 +140,7 @@ public:
     //     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
     // }
     __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, EdgeValueT &weight, int lane, DynamicSlabGraph<EdgesObj, true>::EdgeDynContext &localctxt);
-    __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
+    // __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, EdgeValueT *weigths, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     void countSlabs(VertexT *currentFrontier, int *FrontierSlabs, int N);
@@ -259,7 +259,7 @@ public:
     //     thrust::exclusive_scan(thrust::device, d_data, d_data + N, d_data);
     // }
     __device__ __forceinline__ void insertEdge(bool toInsert, VertexT &src, VertexT &dst, int lane, DynamicSlabGraph<EdgesObj, false>::EdgeDynContext &localctxt);
-    __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
+    // __device__ __forceinline__ void deleteEdge(bool toDelete, VertexT &src, VertexT &dst, int lane);
     void insertEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     void deleteEdges(VertexT *sourceVertex, VertexT *dstVertex, int countN);
     // int getNumberSlabs(VertexT *prefix_sum_in, VertexT *prefix_sum_out, int N);
