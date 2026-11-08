@@ -1,3 +1,5 @@
 /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles/test_sssp.dir
+/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles/test_ssspd.dir
+/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles/test_ssspi.dir
 /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles/edit_cache.dir
 /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles/rebuild_cache.dir

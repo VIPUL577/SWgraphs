@@ -36,3 +36,7 @@ set(COMMON_INCLUDES
 
 add_executable(test_sssp tests/test.cu)
 target_include_directories(test_sssp PRIVATE ${COMMON_INCLUDES})
+add_executable(test_ssspd tests/decrementaltest.cu)
+target_include_directories(test_ssspd PRIVATE ${COMMON_INCLUDES})
+add_executable(test_ssspi tests/incrementaltest.cu)
+target_include_directories(test_ssspi PRIVATE ${COMMON_INCLUDES})

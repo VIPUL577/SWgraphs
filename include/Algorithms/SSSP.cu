@@ -116,7 +116,7 @@ __global__ void InvalidationAdvance(VertexT *currentFrontier, VertexT *outgoingF
             EdgeValueT edgeWeight = __shfl_down_sync(0xffffffff, tentativeV, 1);
             if (((1u << lane) & 0x15555555) && (tentativeV != EMPTY_KEY) && (tentativeV != TOMBSTONE_KEY) && (currentVertex != tentativeV))
             {
-                if (isValidate(minDist[tentativeV]))
+                if (isValidate(minDist[tentativeV]) && !isValidate(minDist[currentVertex]))
                 {
                     outgoingFrontier[currentVertex] = 1;
                 }
@@ -203,7 +203,7 @@ __global__ void incrementalRelax(VertexT *src, VertexT *dst, EdgeValueT *weights
 //                           GENERATING FRONTIER DECREMENTAL
 // ############################################################################################
 template <typename VertexT>
-__global__ void invalidateKernel(VertexT src, VertexT dst, int *mask, distanceArray *minDist, int N)
+__global__ void invalidateKernel(VertexT *src, VertexT *dst, int *mask, distanceArray *minDist, int N)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < N)
@@ -267,15 +267,20 @@ void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgo
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 void DecrementalSSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *src, VertexT *dst, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, VertexT *child, int *childOfft, int cf_n, int slabsperwarp)
 {
-    int Etree = generateChildCSR(outgoingFrontier, prefixKeep, slabPrefixSum, minDist, graphClass.getNumVertices());
-    graphClass.deleteEdges(src, dst, graphClass.getNumVertices());
+    int Etree = generateChildCSR(child,childOfft, slabPrefixSum, minDist, graphClass.getNumVertices());
+    std::cout<<"[DEBUG] 1"<<std::endl; 
+
+    graphClass.deleteEdges(src, dst, cf_n);
+    std::cout<<"[DEBUG] 1"<<std::endl; 
+
     int grid = (cf_n + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     invalidateKernel<VertexT><<<grid, THREADSPERBLOCK>>>(src, dst, outgoingFrontier, minDist, cf_n);
+    std::cout<<"[DEBUG] 1"<<std::endl; 
+
     int numInvalid = generateFrontierWrapper<VertexT>(currentFrontier, outgoingFrontier, prefixKeep, graphClass.getNumVertices());
     BFSgunrockChild(currentFrontier, outgoingFrontier, minDist, child, childOfft, slabPrefixSum, prefixKeep, numInvalid, graphClass.getNumVertices(), Etree);
-    cf_n = SSSPInvalidationAdvanceWrapper(graphClass,currentFrontier,outgoingFrontier,prefixKeep,slabPrefixSum,minDist,slabsperwarp); 
+    cf_n = SSSPInvalidationAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass,currentFrontier,outgoingFrontier,prefixKeep,slabPrefixSum,minDist,slabsperwarp); 
     SSSP<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, cf_n, slabsperwarp);
-
 }
 
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>

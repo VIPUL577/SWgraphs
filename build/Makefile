@@ -129,6 +129,80 @@ test_sssp/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sssp.dir/build.make CMakeFiles/test_sssp.dir/build
 .PHONY : test_sssp/fast
 
+#=============================================================================
+# Target rules for targets named test_ssspd
+
+# Build rule for target.
+test_ssspd: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_ssspd
+.PHONY : test_ssspd
+
+# fast build rule for target.
+test_ssspd/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspd.dir/build.make CMakeFiles/test_ssspd.dir/build
+.PHONY : test_ssspd/fast
+
+#=============================================================================
+# Target rules for targets named test_ssspi
+
+# Build rule for target.
+test_ssspi: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_ssspi
+.PHONY : test_ssspi
+
+# fast build rule for target.
+test_ssspi/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspi.dir/build.make CMakeFiles/test_ssspi.dir/build
+.PHONY : test_ssspi/fast
+
+tests/decrementaltest.o: tests/decrementaltest.cu.o
+.PHONY : tests/decrementaltest.o
+
+# target to build an object file
+tests/decrementaltest.cu.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspd.dir/build.make CMakeFiles/test_ssspd.dir/tests/decrementaltest.cu.o
+.PHONY : tests/decrementaltest.cu.o
+
+tests/decrementaltest.i: tests/decrementaltest.cu.i
+.PHONY : tests/decrementaltest.i
+
+# target to preprocess a source file
+tests/decrementaltest.cu.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspd.dir/build.make CMakeFiles/test_ssspd.dir/tests/decrementaltest.cu.i
+.PHONY : tests/decrementaltest.cu.i
+
+tests/decrementaltest.s: tests/decrementaltest.cu.s
+.PHONY : tests/decrementaltest.s
+
+# target to generate assembly for a file
+tests/decrementaltest.cu.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspd.dir/build.make CMakeFiles/test_ssspd.dir/tests/decrementaltest.cu.s
+.PHONY : tests/decrementaltest.cu.s
+
+tests/incrementaltest.o: tests/incrementaltest.cu.o
+.PHONY : tests/incrementaltest.o
+
+# target to build an object file
+tests/incrementaltest.cu.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspi.dir/build.make CMakeFiles/test_ssspi.dir/tests/incrementaltest.cu.o
+.PHONY : tests/incrementaltest.cu.o
+
+tests/incrementaltest.i: tests/incrementaltest.cu.i
+.PHONY : tests/incrementaltest.i
+
+# target to preprocess a source file
+tests/incrementaltest.cu.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspi.dir/build.make CMakeFiles/test_ssspi.dir/tests/incrementaltest.cu.i
+.PHONY : tests/incrementaltest.cu.i
+
+tests/incrementaltest.s: tests/incrementaltest.cu.s
+.PHONY : tests/incrementaltest.s
+
+# target to generate assembly for a file
+tests/incrementaltest.cu.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspi.dir/build.make CMakeFiles/test_ssspi.dir/tests/incrementaltest.cu.s
+.PHONY : tests/incrementaltest.cu.s
+
 tests/test.o: tests/test.cu.o
 .PHONY : tests/test.o
 
@@ -162,6 +236,14 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... test_sssp"
+	@echo "... test_ssspd"
+	@echo "... test_ssspi"
+	@echo "... tests/decrementaltest.o"
+	@echo "... tests/decrementaltest.i"
+	@echo "... tests/decrementaltest.s"
+	@echo "... tests/incrementaltest.o"
+	@echo "... tests/incrementaltest.i"
+	@echo "... tests/incrementaltest.s"
 	@echo "... tests/test.o"
 	@echo "... tests/test.i"
 	@echo "... tests/test.s"

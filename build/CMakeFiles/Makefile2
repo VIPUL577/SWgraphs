@@ -64,6 +64,8 @@ CMAKE_BINARY_DIR = /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build
 
 # The main recursive "all" target.
 all: CMakeFiles/test_sssp.dir/all
+all: CMakeFiles/test_ssspd.dir/all
+all: CMakeFiles/test_ssspi.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -72,6 +74,8 @@ preinstall:
 
 # The main recursive "clean" target.
 clean: CMakeFiles/test_sssp.dir/clean
+clean: CMakeFiles/test_ssspd.dir/clean
+clean: CMakeFiles/test_ssspi.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -99,6 +103,58 @@ test_sssp: CMakeFiles/test_sssp.dir/rule
 CMakeFiles/test_sssp.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sssp.dir/build.make CMakeFiles/test_sssp.dir/clean
 .PHONY : CMakeFiles/test_sssp.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_ssspd.dir
+
+# All Build rule for target.
+CMakeFiles/test_ssspd.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspd.dir/build.make CMakeFiles/test_ssspd.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspd.dir/build.make CMakeFiles/test_ssspd.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles --progress-num=3,4 "Built target test_ssspd"
+.PHONY : CMakeFiles/test_ssspd.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_ssspd.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_ssspd.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_ssspd.dir/rule
+
+# Convenience name for target.
+test_ssspd: CMakeFiles/test_ssspd.dir/rule
+.PHONY : test_ssspd
+
+# clean rule for target.
+CMakeFiles/test_ssspd.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspd.dir/build.make CMakeFiles/test_ssspd.dir/clean
+.PHONY : CMakeFiles/test_ssspd.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_ssspi.dir
+
+# All Build rule for target.
+CMakeFiles/test_ssspi.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspi.dir/build.make CMakeFiles/test_ssspi.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspi.dir/build.make CMakeFiles/test_ssspi.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles --progress-num=5,6 "Built target test_ssspi"
+.PHONY : CMakeFiles/test_ssspi.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_ssspi.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_ssspi.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/vipulagarwal/Documents/DynamicGraphs/SWgraphs/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_ssspi.dir/rule
+
+# Convenience name for target.
+test_ssspi: CMakeFiles/test_ssspi.dir/rule
+.PHONY : test_ssspi
+
+# clean rule for target.
+CMakeFiles/test_ssspi.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ssspi.dir/build.make CMakeFiles/test_ssspi.dir/clean
+.PHONY : CMakeFiles/test_ssspi.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
