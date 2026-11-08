@@ -207,7 +207,7 @@ __global__ void invalidateKernel(VertexT *src, VertexT *dst, int *mask, distance
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < N)
     {
-        if (getParent(dst[tid]) == src[tid])
+        if (getParent(minDist[dst[tid]]) == src[tid])
         {
             inValidate(minDist[dst[tid]]);
             mask[dst[tid]] = 1;
@@ -222,34 +222,34 @@ template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 int SSSPInvalidationAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int slabsperwarp)
 {
 
-    thrust::sequence(
-        thrust::device,
-        currentFrontier,
-        currentFrontier + graphClass.getNumVertices(), 0);
+    // thrust::sequence(
+    //     thrust::device,
+    //     currentFrontier,
+    //     currentFrontier + graphClass.getNumVertices(), 0);
 
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    printf("SEQUENCE OK\n");
+    // CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    // printf("SEQUENCE OK\n");
 
-    graphClass.countSlabs(
-        currentFrontier,
-        slabPrefixSum,
-        graphClass.getNumVertices());
+    // graphClass.countSlabs(
+    //     currentFrontier,
+    //     slabPrefixSum,
+    //     graphClass.getNumVertices());
 
-    CHECK_CUDA_ERROR(cudaGetLastError());
-    printf("COUNT SLABS LAUNCHED\n");
+    // CHECK_CUDA_ERROR(cudaGetLastError());
+    // printf("COUNT SLABS LAUNCHED\n");
 
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    printf("COUNT SLABS EXECUTED\n");
+    // CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    // printf("COUNT SLABS EXECUTED\n");
 
-    std::cout << "AFTER COUNT SLABS" << std::endl;
+    // std::cout << "AFTER COUNT SLABS" << std::endl;
 
-    int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, graphClass.getNumVertices());
-
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    printf("PREFIX SUM OK: %d\n", noOfSlabs);
-    // thrust::sequence(thrust::device, currentFrontier, currentFrontier + graphClass.getNumVertices(), 0);
-    // graphClass.countSlabs(currentFrontier, slabPrefixSum, graphClass.getNumVertices());
     // int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, graphClass.getNumVertices());
+
+    // CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    // printf("PREFIX SUM OK: %d\n", noOfSlabs);
+    thrust::sequence(thrust::device, currentFrontier, currentFrontier + graphClass.getNumVertices(), 0);
+    graphClass.countSlabs(currentFrontier, slabPrefixSum, graphClass.getNumVertices());
+    int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, graphClass.getNumVertices());
     int noOfThreads = 32 * ceil((double)noOfSlabs / slabsperwarp);
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     InvalidationAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), graphClass.getNumVertices(), noOfThreads, slabsperwarp, noOfSlabs);
@@ -269,9 +269,13 @@ int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, V
     // std::cout <<"cf_n: "<<cf_n<<" Avg: "<<(noOfSlabs / cf_n) << " Max: "<< maxVal<<" Min: "<<minVal<< std::endl; // DEBUG
     //</DEBUG>
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, cf_n);
+    std::cout << "[DEBUG] 2" << std::endl;
+
     int noOfThreads = 32 * ceil((double)noOfSlabs / slabsperwarp);
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp, noOfSlabs);
+    std::cout << "[DEBUG] 2" << std::endl;
+    
     return generateFrontierWrapper<VertexT>(currentFrontier, outgoingFrontier, prefixKeep, graphClass.getNumVertices());
 }
 // ############################################################################################
@@ -305,12 +309,12 @@ void DecrementalSSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, Ver
     BFSgunrockChild(currentFrontier, outgoingFrontier, minDist, child, childOfft, slabPrefixSum, prefixKeep, numInvalid, graphClass.getNumVertices(), Etree);
     std::cout << "[DEBUG] 1" << std::endl;
     
-    cf_n = SSSPInvalidationAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, slabsperwarp);
+    int cf_n2 = SSSPInvalidationAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, slabsperwarp);
     std::cout << "[DEBUG] 1" << std::endl;
     graphClass.deleteEdges(src, dst, cf_n);
     std::cout << "[DEBUG] 1" << std::endl;
     
-    SSSP<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, cf_n, slabsperwarp);
+    SSSP<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, cf_n2, slabsperwarp);
     std::cout << "[DEBUG] 1" << std::endl;
 }
 
