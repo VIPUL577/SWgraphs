@@ -19,7 +19,7 @@ __device__ __forceinline__ void DynamicSlabGraph<EdgesObj, true>::deleteEdge(boo
             atomicSub(d_vertexDegree + currentSrc, deletionCount);
         if (status)
             atomicSub(&d_EdgesPerBucket[d_BucketsPrefixSum[currentSrc] + DestinationVertexBucket], 1);
-        if (green)
+        if (toDelete && sameSrc)
             toDelete = false;
     }
 }
@@ -40,7 +40,7 @@ __device__ __forceinline__ void DynamicSlabGraph<EdgesObj, false>::deleteEdge(bo
             atomicSub(d_vertexDegree + currentSrc, deletionCount);
         if (status)
             atomicSub(&d_EdgesPerBucket[d_BucketsPrefixSum[currentSrc] + DestinationVertexBucket], 1);
-        if (green)
+        if (toDelete && sameSrc)
             toDelete = false;
     }
 }

@@ -120,7 +120,6 @@ __global__ void InvalidationAdvance(VertexT *currentFrontier, VertexT *outgoingF
                 {
                     outgoingFrontier[currentVertex] = 1;
                 }
-                
             }
             startIt++;
             while (startIt == endIt && binaryStart + 1 < cf_n && i + 1 < stop)
@@ -222,9 +221,35 @@ __global__ void invalidateKernel(VertexT *src, VertexT *dst, int *mask, distance
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 int SSSPInvalidationAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int slabsperwarp)
 {
-    thrust::sequence(thrust::device, currentFrontier, currentFrontier + graphClass.getNumVertices(), 0);
-    graphClass.countSlabs(currentFrontier, slabPrefixSum, graphClass.getNumVertices());
+
+    thrust::sequence(
+        thrust::device,
+        currentFrontier,
+        currentFrontier + graphClass.getNumVertices(), 0);
+
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    printf("SEQUENCE OK\n");
+
+    graphClass.countSlabs(
+        currentFrontier,
+        slabPrefixSum,
+        graphClass.getNumVertices());
+
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    printf("COUNT SLABS LAUNCHED\n");
+
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    printf("COUNT SLABS EXECUTED\n");
+
+    std::cout << "AFTER COUNT SLABS" << std::endl;
+
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, graphClass.getNumVertices());
+
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    printf("PREFIX SUM OK: %d\n", noOfSlabs);
+    // thrust::sequence(thrust::device, currentFrontier, currentFrontier + graphClass.getNumVertices(), 0);
+    // graphClass.countSlabs(currentFrontier, slabPrefixSum, graphClass.getNumVertices());
+    // int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, graphClass.getNumVertices());
     int noOfThreads = 32 * ceil((double)noOfSlabs / slabsperwarp);
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     InvalidationAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), graphClass.getNumVertices(), noOfThreads, slabsperwarp, noOfSlabs);
@@ -267,20 +292,26 @@ void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgo
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 void DecrementalSSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *src, VertexT *dst, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, VertexT *child, int *childOfft, int cf_n, int slabsperwarp)
 {
-    int Etree = generateChildCSR(child,childOfft, slabPrefixSum, minDist, graphClass.getNumVertices());
-    std::cout<<"[DEBUG] 1"<<std::endl; 
+    int Etree = generateChildCSR(child, childOfft, slabPrefixSum, minDist, graphClass.getNumVertices());
+    std::cout << "[DEBUG] 1" << std::endl;
 
-    graphClass.deleteEdges(src, dst, cf_n);
-    std::cout<<"[DEBUG] 1"<<std::endl; 
-
+    
     int grid = (cf_n + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     invalidateKernel<VertexT><<<grid, THREADSPERBLOCK>>>(src, dst, outgoingFrontier, minDist, cf_n);
-    std::cout<<"[DEBUG] 1"<<std::endl; 
-
+    std::cout << "[DEBUG] 1" << std::endl;
+    
     int numInvalid = generateFrontierWrapper<VertexT>(currentFrontier, outgoingFrontier, prefixKeep, graphClass.getNumVertices());
+    
     BFSgunrockChild(currentFrontier, outgoingFrontier, minDist, child, childOfft, slabPrefixSum, prefixKeep, numInvalid, graphClass.getNumVertices(), Etree);
-    cf_n = SSSPInvalidationAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass,currentFrontier,outgoingFrontier,prefixKeep,slabPrefixSum,minDist,slabsperwarp); 
+    std::cout << "[DEBUG] 1" << std::endl;
+    
+    cf_n = SSSPInvalidationAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, slabsperwarp);
+    std::cout << "[DEBUG] 1" << std::endl;
+    graphClass.deleteEdges(src, dst, cf_n);
+    std::cout << "[DEBUG] 1" << std::endl;
+    
     SSSP<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, cf_n, slabsperwarp);
+    std::cout << "[DEBUG] 1" << std::endl;
 }
 
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>

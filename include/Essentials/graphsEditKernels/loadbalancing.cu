@@ -23,7 +23,7 @@ __global__ void countSlabsKernel(edgeHashCxt* graphVertex,VertexT* currentFronti
         return;
 
     auto node = currentFrontier[frontierIdx];
-
+    if((node == EMPTY_KEY) || (node == TOMBSTONE_KEY)) return; 
     auto it = graphVertex[node].Begin();
     auto end = graphVertex[node].End();
 
