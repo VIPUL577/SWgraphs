@@ -1,3 +1,4 @@
+#pragma once
 #include <stdio.h>
 #include <cuda.h>
 #include <math.h>
@@ -7,6 +8,7 @@
 #include <thrust/execution_policy.h>
 #include <thrust/device_ptr.h>
 #include <thrust/extrema.h>
+#include <thrust/sequence.h>
 #include <thrust/scan.h>
 #define THREADSPERBLOCK 512
 

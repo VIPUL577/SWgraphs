@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
         std::vector<int> CPUdist(V, INT_MAX);
 
         clock_t starttt = clock();
-        // dijkstra(V, E, src, dst, weights, parent,CPUdist,source);
+        dijkstra(V, E, src, dst, weights, parent,CPUdist,source);
         clock_t enddd = clock();
         printf("Time Taken (CPU)   : %f ms\n", (((double)enddd - (double)starttt) / CLOCKS_PER_SEC) * 1000);
         runSSSP(src.data(), dst.data(), weights.data(), V, E, source, CPUdist,parent);
