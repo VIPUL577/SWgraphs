@@ -3,13 +3,14 @@
 #include <cuda.h>
 #include <math.h>
 #include <time.h>
-#include "Essentials/main/definations.cu"
 #include "Essentials/main/graph.cu"
-#include "Essentials/helpers.cu"
+#include "Essentials/main/helpers.cuh"
+#include "Essentials/main/gunrockBFS.cuh"
 
-//############################################################################################
-//                                       KERNELS
-//############################################################################################
+
+// ############################################################################################
+//                                        KERNELS
+// ############################################################################################
 template <typename VertexT, typename EdgeValueT, typename edgeHashCtxt>
 __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier, distanceArray *minDist, int *SlabPrefixSum, edgeHashCtxt *graph, int cf_n, int noThreads, int slabsperwarp, int totalSlabs)
 { /*
@@ -43,7 +44,8 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
         auto currentVertex = currentFrontier[binaryStart];
         int offset = begin - SlabPrefixSum[binaryStart];
         auto startIt = graph[currentVertex].Begin();
-        for (int i = 0; i < offset; ++i, ++startIt);
+        for (int i = 0; i < offset; ++i, ++startIt)
+            ;
         auto endIt = graph[currentVertex].End();
         int stop = min(end, totalSlabs);
         for (int i = begin; i < stop; i++)
@@ -53,9 +55,10 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
             if (((1u << lane) & 0x15555555) && (tentativeV != EMPTY_KEY) && (tentativeV != TOMBSTONE_KEY) && (currentVertex != tentativeV))
             {
                 EdgeValueT newDist = getDistance(minDist[currentVertex]) + edgeWeight;
-                distanceArray newPD = getWord(newDist,currentVertex);
+                distanceArray newPD = getWord(newDist, currentVertex);
                 distanceArray old = atomicMin(&minDist[tentativeV], newPD);
-                if (newPD < old){
+                if (newPD < old)
+                {
                     outgoingFrontier[tentativeV] = 1;
                 }
             }
@@ -71,46 +74,65 @@ __global__ void SSSPAdvance(VertexT *currentFrontier, VertexT *outgoingFrontier,
         }
     }
 }
-//############################################################################################
-//                               GENERATING CHILD CSR
-//############################################################################################
+// ############################################################################################
+//                                GENERATING CHILD CSR
+// ############################################################################################
 template <typename VertexT>
-__global__ void countChild(distanceArray *minDist, int * count, int V){
-    //launch V
+__global__ void countChild(distanceArray *minDist, int *count, int V)
+{
+    // launch V
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if(tid<V){
-        auto parent = getParent(minDist[tid]); 
-        if(parent == -1) return; 
-        atomicAdd(&count[parent], 1); 
+    if (tid < V)
+    {
+        auto parent = getParent(minDist[tid]);
+        if (parent == -1)
+            return;
+        atomicAdd(&count[parent], 1);
     }
 }
 template <typename VertexT>
-__global__ void populateChild(VertexT * child, int * childOfft, int* cursor, distanceArray *minDist,int V){
+__global__ void populateChild(VertexT *child, int *childOfft, int *cursor, distanceArray *minDist, int V)
+{
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if(tid<V){
-        auto parent = getParent(minDist[tid]); 
-        child[atomicAdd(&cursor[parent],1)] = static_cast<VertexT>(tid); 
+    if (tid < V)
+    {
+        auto parent = getParent(minDist[tid]);
+        child[atomicAdd(&cursor[parent], 1)] = static_cast<VertexT>(tid);
     }
 }
 template <typename VertexT>
-void generateChildCSR(VertexT* child, int* childOfft, int* vkeep, distanceArray *minDist,int V){
-    
-    int grid = (V+THREADSPERBLOCK-1)/THREADSPERBLOCK; 
+int generateChildCSR(VertexT *child, int *childOfft, int *vkeep, distanceArray *minDist, int V)
+{
+
+    int grid = (V + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
     initZero<int><<<grid, THREADSPERBLOCK>>>(childOfft, V);
-    countChild<VertexT><<<grid,THREADSPERBLOCK>>>(minDist,childOfft,V); 
-    int numberChildern = getNumberSlabs<VertexT>(childOfft,childOfft,V); 
-    thrust::copy(thrust::device,childOfft,childOfft + V,vkeep);
-    populateChild<VertexT><<<grid,THREADSPERBLOCK>>>(child,childOfft,vkeep,minDist,V); 
-    std::cout<<"DONE"<<std::endl;
+    countChild<VertexT><<<grid, THREADSPERBLOCK>>>(minDist, childOfft, V);
+    int numberChildern = getNumberSlabs<VertexT>(childOfft, childOfft, V);
+    thrust::copy(thrust::device, childOfft, childOfft + V, vkeep);
+    populateChild<VertexT><<<grid, THREADSPERBLOCK>>>(child, childOfft, vkeep, minDist, V);
+    return numberChildern; 
+    // std::cout<<"DONE"<<std::endl;
 }
-//############################################################################################
-//                          GENERATING FRONTIER DECREMENTAL
-//############################################################################################
+// ############################################################################################
+//                           GENERATING FRONTIER DECREMENTAL
+// ############################################################################################
+template <typename VertexT>
+__global__ void invalidateKernel(VertexT src, VertexT dst, int *mask, distanceArray *minDist, int N)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < N)
+    {
+        if (getParent(dst[tid]) == src[tid])
+        {
+            inValidate(minDist[dst[tid]]);
+            mask[dst[tid]] = 1;
+        }
+    }
+}
 
-
-//############################################################################################
-//                                  WRAPPER FUNCTIONS
-//############################################################################################
+// ############################################################################################
+//                                   WRAPPER FUNCTIONS
+// ############################################################################################
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int cf_n, int slabsperwarp)
 {
@@ -127,20 +149,28 @@ int SSSPAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, V
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, cf_n);
     int noOfThreads = 32 * ceil((double)noOfSlabs / slabsperwarp);
     int grid = (noOfThreads + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
-    SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier,minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp, noOfSlabs);
-    return generateFrontierWrapper<VertexT>(currentFrontier,outgoingFrontier,prefixKeep,graphClass.getNumVertices()); 
+    SSSPAdvance<VertexT, EdgeValueT, typename DynamicSlabGraph::edgeHashCxt><<<grid, THREADSPERBLOCK>>>(currentFrontier, outgoingFrontier, minDist, slabPrefixSum, graphClass.getVertexContexts(), cf_n, noOfThreads, slabsperwarp, noOfSlabs);
+    return generateFrontierWrapper<VertexT>(currentFrontier, outgoingFrontier, prefixKeep, graphClass.getNumVertices());
 }
-//############################################################################################
-//                                  MAIN FUNCTIONS
-//############################################################################################
+// ############################################################################################
+//                                   MAIN FUNCTIONS
+// ############################################################################################
 template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
-void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int cf_n, int slabsperwarp, int V)
+void SSSP(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int cf_n, int slabsperwarp)
 {
     while (cf_n > 0)
     {
-        cf_n = SSSPAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep,slabPrefixSum, minDist, cf_n, slabsperwarp);
+        cf_n = SSSPAdvanceWrapper<DynamicSlabGraph, VertexT, EdgeValueT>(graphClass, currentFrontier, outgoingFrontier, prefixKeep, slabPrefixSum, minDist, cf_n, slabsperwarp);
     }
-    std::cout<<"DONE"<<std::endl;
-
-    generateChildCSR(outgoingFrontier,prefixKeep,slabPrefixSum,minDist,V);
+    // std::cout<<"DONE"<<std::endl;
+}
+template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
+void DecrementalSSSP(DynamicSlabGraph &graphClass,VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *src, VertexT *dst, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist,VertexT *child, int *childOfft, int cf_n, int slabsperwarp)
+{
+    int Etree = generateChildCSR(outgoingFrontier, prefixKeep, slabPrefixSum, minDist, graphClass.getNumVertices());
+    graphClass.deleteEdges(src, dst, graphClass.getNumVertices());
+    int grid = (cf_n + THREADSPERBLOCK - 1) / THREADSPERBLOCK;
+    invalidateKernel<VertexT><<<grid, THREADSPERBLOCK>>>(src,dst,outgoingFrontier,minDist,cf_n); 
+    int numInvalid = generateFrontierWrapper<VertexT>(currentFrontier,outgoingFrontier,prefixKeep,graphClass.getNumVertices()); 
+    BFSgunrockChild(currentFrontier,outgoingFrontier,minDist,child,childOfft,slabPrefixSum,prefixKeep,numInvalid,graphClass.getNumVertices(),Etree);
 }

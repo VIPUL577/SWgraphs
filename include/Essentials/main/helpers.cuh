@@ -1,5 +1,6 @@
 
 #pragma once 
+
 using distanceArray = unsigned long long int;
 
 __device__ __host__
@@ -15,8 +16,9 @@ int getParent(distanceArray word) {
 __device__ __host__
 distanceArray getWord(int distance, int parent) {
     return (static_cast<distanceArray>(static_cast<uint32_t>(distance)) << 32)
-           | static_cast<uint32_t>(parent);
+    | static_cast<uint32_t>(parent);
 }
+
 //############################################################################################
 //                                  HELPER KERNELS
 //############################################################################################
@@ -75,8 +77,20 @@ int generateFrontierWrapper(p* currentFrontier, p* bitmask, p* prefixKeep, int N
     return cf_n; 
 }
 __device__ void inValidate(distanceArray &word){
-    word = INF; 
+    word = getWord(INT_MAX,-1); 
 }
 __device__ bool isValidate(distanceArray &word){
-    return word == INF ;
+    return getDistance(word) == INT_MAX ;
+}
+// TEMPLATE MISSING -> FOR NOW NO ERROR AS THE TESTS ARE IN INT
+__device__ int degree(int *row_offsets, int vertex, int V, int E)
+{
+    int sub = (vertex == V - 1) ? E : row_offsets[vertex + 1];
+    return sub - row_offsets[vertex];
+}
+__global__ void getDegree(int *current_frontier, int *row_indices, int *degree_array, int N, int V, int E)
+{ //-> number of vertex in "current fronteir" (N)
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < N)
+        degree_array[idx] = degree(row_indices, current_frontier[idx], V, E);
 }

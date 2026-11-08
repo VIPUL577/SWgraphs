@@ -165,7 +165,7 @@ void runSSSP(
     checkCuda(cudaMemcpy(d_distance + source, &zero, sizeof(distanceArray),cudaMemcpyHostToDevice));
 
     clock_t starttt = clock();
-    SSSP<Graph, int, int>(graph,d_current,d_next,d_prefix,d_slabPrefix,d_distance,1,16,V);
+    SSSP<Graph, int, int>(graph,d_current,d_next,d_prefix,d_slabPrefix,d_distance,1,16);
     clock_t enddd = clock();
     // cout<<"[DEBUG] 6"<<endl; 
 
