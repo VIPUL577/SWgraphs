@@ -222,31 +222,6 @@ template <typename DynamicSlabGraph, typename VertexT, typename EdgeValueT>
 int SSSPInvalidationAdvanceWrapper(DynamicSlabGraph &graphClass, VertexT *currentFrontier, VertexT *outgoingFrontier, VertexT *prefixKeep, int *slabPrefixSum, distanceArray *minDist, int slabsperwarp)
 {
 
-    // thrust::sequence(
-    //     thrust::device,
-    //     currentFrontier,
-    //     currentFrontier + graphClass.getNumVertices(), 0);
-
-    // CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    // printf("SEQUENCE OK\n");
-
-    // graphClass.countSlabs(
-    //     currentFrontier,
-    //     slabPrefixSum,
-    //     graphClass.getNumVertices());
-
-    // CHECK_CUDA_ERROR(cudaGetLastError());
-    // printf("COUNT SLABS LAUNCHED\n");
-
-    // CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    // printf("COUNT SLABS EXECUTED\n");
-
-    // std::cout << "AFTER COUNT SLABS" << std::endl;
-
-    // int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, graphClass.getNumVertices());
-
-    // CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-    // printf("PREFIX SUM OK: %d\n", noOfSlabs);
     thrust::sequence(thrust::device, currentFrontier, currentFrontier + graphClass.getNumVertices(), 0);
     graphClass.countSlabs(currentFrontier, slabPrefixSum, graphClass.getNumVertices());
     int noOfSlabs = getNumberSlabs<int>(slabPrefixSum, slabPrefixSum, graphClass.getNumVertices());
